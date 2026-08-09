@@ -1,0 +1,78 @@
+# Production overrides — extend docker-compose.yml
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up
+
+services:
+  postgres:
+    restart: always
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # No dev bind mounts in production
+
+  redis:
+    restart: always
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile  # Use the multi-stage production Dockerfile
+    restart: always
+    volumes: []  # No bind mount — use baked image
+    command: >
+      gunicorn app.main:app
+      --workers 4
+      --worker-class uvicorn.workers.UvicornWorker
+      --bind 0.0.0.0:8000
+      --timeout 60
+      --keepalive 5
+      --log-level info
+    # Do NOT expose port 8000 directly in production — use nginx
+    ports: []
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: always
+    volumes: []
+    command: celery -A app.workers.celery_app worker --loglevel=warning --concurrency=4
+
+  beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: always
+    volumes: []
+    command: celery -A app.workers.celery_app beat --loglevel=warning
+
+  flower:
+    # Disable Flower in production (use internal monitoring only)
+    deploy:
+      replicas: 0
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile  # Multi-stage build — outputs static files
+    restart: always
+    volumes: []
+    ports: []  # Served via nginx
+
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: reposage_nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - nginx_certs:/etc/nginx/certs:ro
+    depends_on:
+      - backend
+      - frontend
+
+volumes:
+  postgres_data:
+  redis_data:
+  nginx_certs:

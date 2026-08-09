@@ -1,0 +1,75 @@
+repos:
+  # ── Python formatting and linting ──────────────────────────────────────────
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.4.0
+    hooks:
+      - id: ruff
+        name: ruff lint
+        args: ["--fix"]
+        types_or: [python, pyi]
+      - id: ruff-format
+        name: ruff format
+        types_or: [python, pyi]
+
+  # ── Python type checking ───────────────────────────────────────────────────
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.10.0
+    hooks:
+      - id: mypy
+        name: mypy type check
+        additional_dependencies:
+          - "pydantic>=2.7.0"
+          - "pydantic-settings>=2.3.0"
+        args: ["--config-file=backend/pyproject.toml"]
+        files: ^backend/
+
+  # ── General file hygiene ───────────────────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+        name: trim trailing whitespace
+      - id: end-of-file-fixer
+        name: fix end of files
+      - id: check-yaml
+        name: check YAML syntax
+      - id: check-toml
+        name: check TOML syntax
+      - id: check-json
+        name: check JSON syntax
+      - id: check-merge-conflict
+        name: check for merge conflicts
+      - id: check-case-conflict
+        name: check for filename case conflicts
+      - id: detect-private-key
+        name: detect private keys (no secrets in git)
+      - id: no-commit-to-branch
+        name: prevent commits to main/master
+        args: ["--branch", "main", "--branch", "master"]
+
+  # ── JavaScript / TypeScript formatting ────────────────────────────────────
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v3.4.2
+    hooks:
+      - id: prettier
+        name: prettier format
+        files: ^frontend/
+        types_or: [ts, tsx, css, json, yaml, markdown]
+        additional_dependencies:
+          - "prettier@3.4.2"
+          - "prettier-plugin-tailwindcss@0.6.9"
+
+  # ── Commit message linting ─────────────────────────────────────────────────
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v3.29.1
+    hooks:
+      - id: commitizen
+        name: conventional commits check
+        stages: [commit-msg]
+
+default_language_version:
+  python: python3.12
+  node: "20"
+
+# CI mode: fail fast on first error
+fail_fast: false

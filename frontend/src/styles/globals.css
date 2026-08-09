@@ -1,0 +1,155 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  globals.css
+  
+  CSS custom properties (variables) for the shadcn/ui design system.
+  These are the single source of truth for all colors.
+  Switching between light and dark mode = swapping these variable values.
+  
+  HSL format: hsl(hue saturation% lightness%)
+  Tailwind config references these as: "hsl(var(--background))"
+*/
+
+@layer base {
+  :root {
+    /* ── Light theme ─────────────────────────────────────────────────────── */
+    --background:        220 15% 97%;
+    --foreground:        220 25% 10%;
+
+    --card:              0 0% 100%;
+    --card-foreground:   220 25% 10%;
+
+    --popover:           0 0% 100%;
+    --popover-foreground: 220 25% 10%;
+
+    --primary:           220 80% 53%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary:         220 15% 92%;
+    --secondary-foreground: 220 25% 10%;
+
+    --muted:             220 15% 92%;
+    --muted-foreground:  220 15% 45%;
+
+    --accent:            220 15% 92%;
+    --accent-foreground: 220 25% 10%;
+
+    --destructive:       0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border:            220 15% 88%;
+    --input:             220 15% 88%;
+    --ring:              220 80% 53%;
+
+    --radius:            0.625rem;
+
+    /* Sidebar dimensions */
+    --sidebar-width:     260px;
+    --sidebar-collapsed: 68px;
+    --topbar-height:     60px;
+  }
+
+  .dark {
+    /* ── Dark theme ──────────────────────────────────────────────────────── */
+    --background:        222 24% 8%;
+    --foreground:        213 31% 91%;
+
+    --card:              222 24% 11%;
+    --card-foreground:   213 31% 91%;
+
+    --popover:           222 24% 11%;
+    --popover-foreground: 213 31% 91%;
+
+    --primary:           220 80% 63%;
+    --primary-foreground: 222 24% 8%;
+
+    --secondary:         222 24% 15%;
+    --secondary-foreground: 213 31% 91%;
+
+    --muted:             222 24% 15%;
+    --muted-foreground:  215 16% 57%;
+
+    --accent:            222 24% 15%;
+    --accent-foreground: 213 31% 91%;
+
+    --destructive:       0 62% 55%;
+    --destructive-foreground: 213 31% 91%;
+
+    --border:            222 24% 18%;
+    --input:             222 24% 18%;
+    --ring:              220 80% 63%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    /* Smooth scroll for all anchor links */
+    scroll-behavior: smooth;
+    /* Prevent layout shift from scrollbar appearance */
+    scrollbar-gutter: stable;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    /* Prevent overscroll bounce on iOS */
+    overscroll-behavior: none;
+  }
+
+  /* Custom scrollbar — subtle and on-brand */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/40;
+  }
+
+  /* Focus ring — visible only for keyboard navigation */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+}
+
+@layer utilities {
+  /* Gradient text utility */
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent;
+  }
+
+  /* Glass card utility */
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-sm border border-border/50;
+  }
+
+  /* Animated gradient background */
+  .gradient-bg {
+    background: radial-gradient(ellipse at top, hsl(220 80% 15% / 0.3) 0%, transparent 60%),
+                radial-gradient(ellipse at bottom right, hsl(280 60% 15% / 0.2) 0%, transparent 50%);
+  }
+
+  /* Content fade-in animation */
+  .animate-page-enter {
+    @apply animate-fade-in;
+  }
+
+  /* Skeleton loading utility */
+  .skeleton {
+    @apply bg-muted animate-pulse rounded-md;
+  }
+}
