@@ -14,6 +14,7 @@ export const ROUTES = {
   // Authenticated routes
   DASHBOARD: "/dashboard",
   REPOSITORIES: "/repositories",
+  CONNECT_REPOSITORY: "/repositories/connect",
   REPOSITORY_DETAIL: (id: string) => `/repositories/${id}` as const,
   ORGANIZATIONS: "/organizations",
   ORGANIZATION_DETAIL: (id: string) => `/organizations/${id}` as const,

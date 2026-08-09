@@ -9,6 +9,7 @@ These tests verify:
 - Token type validation (prevents access tokens used as refresh tokens)
 - Expired token handling
 """
+
 from __future__ import annotations
 
 import uuid

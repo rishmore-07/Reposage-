@@ -5,6 +5,7 @@ JWT token creation/verification and password hashing utilities.
 Centralizes all cryptographic operations — no other module should
 import jose or passlib directly.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
@@ -22,6 +23,7 @@ logger = get_logger(__name__)
 
 
 # ── Password Hashing ──────────────────────────────────────────────────────────
+
 
 def hash_password(plain_password: str) -> str:
     """Hash a plaintext password using bcrypt. Returns the hashed string."""
@@ -47,6 +49,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 # ── JWT Token Creation ────────────────────────────────────────────────────────
 
+
 def create_access_token(
     subject: str | UUID,
     *,
@@ -65,10 +68,7 @@ def create_access_token(
         A signed JWT string.
     """
     now = datetime.now(UTC)
-    expire = now + (
-        expires_delta
-        or timedelta(minutes=settings.access_token_expire_minutes)
-    )
+    expire = now + (expires_delta or timedelta(minutes=settings.access_token_expire_minutes))
 
     payload: dict[str, Any] = {
         "sub": str(subject),
@@ -103,6 +103,7 @@ def create_refresh_token(subject: str | UUID) -> str:
 
 
 # ── JWT Token Verification ────────────────────────────────────────────────────
+
 
 def decode_token(token: str, *, expected_type: str = "access") -> dict[str, Any]:
     """

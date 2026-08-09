@@ -16,7 +16,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "@/components/layout/AppShell";
 import { ProtectedRoute } from "@/components/routing/ProtectedRoute";
-import { ROUTES } from "@/constants/routes";
+import { ROUTES, ROUTE_PATTERNS } from "@/constants/routes";
 
 // Pages
 import { DashboardPage } from "@/pages/DashboardPage";
@@ -25,6 +25,8 @@ import { LoginPage } from "@/pages/LoginPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 import { RegisterPage } from "@/pages/RegisterPage";
 import { RepositoriesPage } from "@/pages/RepositoriesPage";
+import { ConnectRepositoryPage } from "@/pages/ConnectRepositoryPage";
+import { RepositoryDetailPage } from "@/pages/RepositoryDetailPage";
 
 export function AppRouter() {
   return (
@@ -52,6 +54,8 @@ export function AppRouter() {
         {/* Main application pages */}
         <Route path={ROUTES.DASHBOARD} element={<DashboardPage />} />
         <Route path={ROUTES.REPOSITORIES} element={<RepositoriesPage />} />
+        <Route path={ROUTES.CONNECT_REPOSITORY} element={<ConnectRepositoryPage />} />
+        <Route path={ROUTE_PATTERNS.REPOSITORY_DETAIL} element={<RepositoryDetailPage />} />
       </Route>
 
       {/* ── 404 catch-all ────────────────────────────────────────────── */}

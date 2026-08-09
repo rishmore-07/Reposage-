@@ -9,6 +9,7 @@ Configuration principles:
 - Task modules are explicitly listed (no autodiscovery to prevent import side effects)
 - Retry behavior is configured per-task, not globally
 """
+
 from __future__ import annotations
 
 from celery import Celery
@@ -28,20 +29,16 @@ celery_app.conf.update(
     task_serializer=settings.celery_task_serializer,
     result_serializer=settings.celery_result_serializer,
     accept_content=settings.celery_accept_content,
-
     # Timezone
     timezone=settings.celery_timezone,
     enable_utc=True,
-
     # Task behavior
-    task_acks_late=True,        # Acknowledge only after task completes (safe retry on crash)
+    task_acks_late=True,  # Acknowledge only after task completes (safe retry on crash)
     task_reject_on_worker_lost=True,  # Re-queue if worker dies mid-task
-    task_track_started=True,    # Allow monitoring of running tasks
+    task_track_started=True,  # Allow monitoring of running tasks
     worker_prefetch_multiplier=1,  # One task per worker at a time (prevents memory bloat for long tasks)
-
     # Result expiry
     result_expires=3600,  # Keep results for 1 hour
-
     # Task discovery — explicit imports prevent circular import issues
     include=[
         "app.workers.tasks.repo_tasks",

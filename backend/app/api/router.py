@@ -9,6 +9,7 @@ Adding a new feature:
 3. Include it in api_router with the correct prefix and tags
 4. Zero changes to any other file.
 """
+
 from __future__ import annotations
 
 from fastapi import APIRouter

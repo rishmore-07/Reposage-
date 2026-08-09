@@ -10,6 +10,7 @@ This module:
 
 In production, always use `alembic upgrade head` to apply schema changes.
 """
+
 from __future__ import annotations
 
 from sqlalchemy import text

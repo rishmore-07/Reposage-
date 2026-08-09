@@ -5,6 +5,7 @@ Application-wide enums and string constants.
 Centralizing these prevents magic strings scattered across the codebase.
 All constants are typed (Enum or StrEnum) for IDE autocompletion and mypy.
 """
+
 from __future__ import annotations
 
 from enum import StrEnum
@@ -12,6 +13,7 @@ from enum import StrEnum
 
 class Environment(StrEnum):
     """Deployment environment identifiers."""
+
     DEVELOPMENT = "development"
     STAGING = "staging"
     PRODUCTION = "production"
@@ -19,12 +21,14 @@ class Environment(StrEnum):
 
 class TokenType(StrEnum):
     """JWT token type claim values."""
+
     ACCESS = "access"
     REFRESH = "refresh"
 
 
 class UserRole(StrEnum):
     """User roles within an organization."""
+
     OWNER = "owner"
     ADMIN = "admin"
     MEMBER = "member"
@@ -33,18 +37,20 @@ class UserRole(StrEnum):
 
 class RepositoryStatus(StrEnum):
     """Analysis pipeline status for a repository."""
-    PENDING = "pending"       # Registered but not yet analyzed
-    QUEUED = "queued"         # Queued for Celery worker
-    CLONING = "cloning"       # Worker is cloning the repo
-    ANALYZING = "analyzing"   # Worker is running analysis pipeline
-    EMBEDDING = "embedding"   # Worker is building vector embeddings
-    READY = "ready"           # Analysis complete and available
-    FAILED = "failed"         # Analysis failed (see error field)
-    STALE = "stale"           # Repo has new commits — re-analysis needed
+
+    PENDING = "pending"  # Registered but not yet analyzed
+    QUEUED = "queued"  # Queued for Celery worker
+    CLONING = "cloning"  # Worker is cloning the repo
+    ANALYZING = "analyzing"  # Worker is running analysis pipeline
+    EMBEDDING = "embedding"  # Worker is building vector embeddings
+    READY = "ready"  # Analysis complete and available
+    FAILED = "failed"  # Analysis failed (see error field)
+    STALE = "stale"  # Repo has new commits — re-analysis needed
 
 
 class NotificationType(StrEnum):
     """Notification event types."""
+
     ANALYSIS_COMPLETE = "analysis_complete"
     ANALYSIS_FAILED = "analysis_failed"
     MEMBER_INVITED = "member_invited"
@@ -56,6 +62,7 @@ class NotificationType(StrEnum):
 
 class ApiKeyStatus(StrEnum):
     """API key lifecycle states."""
+
     ACTIVE = "active"
     REVOKED = "revoked"
     EXPIRED = "expired"
@@ -63,6 +70,7 @@ class ApiKeyStatus(StrEnum):
 
 class AuditAction(StrEnum):
     """Audit log action identifiers — immutable record of what happened."""
+
     USER_CREATED = "user.created"
     USER_UPDATED = "user.updated"
     USER_DELETED = "user.deleted"

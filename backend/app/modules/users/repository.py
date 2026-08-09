@@ -3,12 +3,13 @@ app/repositories/user_repository.py
 
 User-specific data access methods that extend BaseRepository.
 """
+
 from __future__ import annotations
 
 from sqlalchemy import select
 
-from app.modules.users.models import User
 from app.db.repository import BaseRepository
+from app.modules.users.models import User
 
 
 class UserRepository(BaseRepository[User]):
@@ -26,9 +27,7 @@ class UserRepository(BaseRepository[User]):
         Returns:
             The matching User or None if not found.
         """
-        result = await self.session.execute(
-            select(User).where(User.email == email.lower())
-        )
+        result = await self.session.execute(select(User).where(User.email == email.lower()))
         return result.scalar_one_or_none()
 
     async def get_by_github_id(self, github_id: int) -> User | None:
@@ -37,9 +36,7 @@ class UserRepository(BaseRepository[User]):
 
         Used during GitHub OAuth login to find or create an account.
         """
-        result = await self.session.execute(
-            select(User).where(User.github_id == github_id)
-        )
+        result = await self.session.execute(select(User).where(User.github_id == github_id))
         return result.scalar_one_or_none()
 
     async def email_exists(self, email: str) -> bool:

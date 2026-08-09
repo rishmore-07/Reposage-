@@ -3,6 +3,7 @@ app/schemas/auth.py
 
 Pydantic v2 schemas for authentication endpoints.
 """
+
 from __future__ import annotations
 
 from pydantic import BaseModel, EmailStr, Field, SecretStr

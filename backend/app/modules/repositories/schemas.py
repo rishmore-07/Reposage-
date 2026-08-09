@@ -3,12 +3,13 @@ app/schemas/repository.py
 
 Pydantic v2 schemas for repository endpoints.
 """
+
 from __future__ import annotations
 
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field
 
 from app.core.constants import RepositoryStatus
 
@@ -20,7 +21,6 @@ class RepositoryRead(BaseModel):
 
     id: uuid.UUID
     organization_id: uuid.UUID | None
-    owner_id: uuid.UUID
     github_repo_id: int
     full_name: str
     name: str
@@ -40,12 +40,6 @@ class RepositoryCreate(BaseModel):
     """Request body for connecting a new repository."""
 
     github_repo_id: int = Field(..., description="GitHub repository ID")
-    full_name: str = Field(..., description="GitHub full name: 'owner/repo'")
-    name: str = Field(..., max_length=255, description="Repository name")
-    description: str | None = Field(None, description="Repository description")
-    html_url: str = Field(..., description="GitHub web URL")
-    default_branch: str = Field(default="main", description="Default branch")
-    is_private: bool = Field(default=False)
     organization_id: uuid.UUID | None = Field(
         None,
         description="Organization to connect under (null for personal repos)",

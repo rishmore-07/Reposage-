@@ -7,6 +7,7 @@ Notifications are fan-out messages sent to users when events occur
 (analysis complete, member invited, drift detected, etc.).
 Each notification has a type, payload (JSON), and a read status.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -15,7 +16,6 @@ from sqlalchemy import ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.core.constants import NotificationType
 from app.db.base import Base
 from app.db.mixins import TimestampMixin, UUIDPrimaryKeyMixin
 
@@ -68,10 +68,7 @@ class Notification(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
     def __repr__(self) -> str:
-        return (
-            f"<Notification id={self.id} "
-            f"type={self.notification_type!r} read={self.is_read}>"
-        )
+        return f"<Notification id={self.id} type={self.notification_type!r} read={self.is_read}>"
 
 
 class AuditLog(UUIDPrimaryKeyMixin, Base):
@@ -87,6 +84,7 @@ class AuditLog(UUIDPrimaryKeyMixin, Base):
 
     # Immutable creation timestamp
     from datetime import UTC, datetime
+
     from sqlalchemy import DateTime, func
 
     created_at: Mapped[datetime] = mapped_column(

@@ -9,6 +9,7 @@ Design principles:
 - All methods accept an AsyncSession (injected by the service via constructor)
 - Type parameters ensure type safety: repository.get(id) returns the correct model type
 """
+
 from __future__ import annotations
 
 import uuid
@@ -70,9 +71,7 @@ class BaseRepository(Generic[ModelT]):
 
     async def count(self) -> int:
         """Return the total number of records in the table."""
-        result = await self.session.execute(
-            select(func.count()).select_from(self.model)
-        )
+        result = await self.session.execute(select(func.count()).select_from(self.model))
         return result.scalar_one()
 
     async def create(self, **kwargs: Any) -> ModelT:

@@ -9,6 +9,7 @@ Architecture decisions:
 - Sessions are per-request, injected via FastAPI dependency (api/dependencies.py)
 - This module never imports any app-level code to avoid circular imports
 """
+
 from __future__ import annotations
 
 from collections.abc import AsyncGenerator
@@ -32,9 +33,9 @@ engine: AsyncEngine = create_async_engine(
     pool_size=settings.db_pool_size,
     max_overflow=settings.db_max_overflow,
     pool_timeout=settings.db_pool_timeout,
-    pool_pre_ping=True,    # Validate connections before use (handles DB restarts)
-    echo=settings.db_echo, # Log SQL statements when DEBUG mode
-    future=True,           # Use SQLAlchemy 2.0 API
+    pool_pre_ping=True,  # Validate connections before use (handles DB restarts)
+    echo=settings.db_echo,  # Log SQL statements when DEBUG mode
+    future=True,  # Use SQLAlchemy 2.0 API
 )
 
 # ── Session factory ───────────────────────────────────────────────────────────
@@ -49,6 +50,7 @@ AsyncSessionLocal: async_sessionmaker[AsyncSession] = async_sessionmaker(
 
 
 # ── Dependency-injectable session ─────────────────────────────────────────────
+
 
 async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
     """

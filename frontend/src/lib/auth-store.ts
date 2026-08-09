@@ -33,6 +33,7 @@ interface AuthState {
   setAuthenticated: (status: boolean) => void;
   setUser: (user: AuthUser | null) => void;
   logout: () => void;
+  initializeAuth: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -54,6 +55,17 @@ export const useAuthStore = create<AuthState>()(
           user: null,
           isAuthenticated: false,
         });
+      },
+
+      initializeAuth: async () => {
+        try {
+          const { default: apiClient } = await import("./api-client");
+          const response = await apiClient.get<AuthUser>("/api/v1/users/me");
+          set({ user: response.data, isAuthenticated: true });
+        } catch {
+          // If unauthenticated or network error, reset state
+          set({ user: null, isAuthenticated: false });
+        }
       },
     }),
     {

@@ -29,6 +29,7 @@ dependencies = [
     # ── Security ───────────────────────────────────────────────────────────────
     "bcrypt>=4.1.2",
     "python-jose[cryptography]>=3.3.0",
+    "cryptography>=42.0.0",
 
     # ── Background Workers ─────────────────────────────────────────────────────
     "celery[redis]>=5.4.0",
@@ -90,6 +91,8 @@ select = [
     "RUF", # ruff-specific rules
 ]
 ignore = [
+    "B008",    # Do not perform function calls in argument defaults
+    "ANN201",  # Missing return type annotation for public function
     "ANN101",  # Missing type annotation for `self`
     "ANN102",  # Missing type annotation for `cls`
     "S101",    # Use of `assert` (needed in tests)
@@ -140,4 +143,9 @@ exclude_lines = [
     "if TYPE_CHECKING:",
     "@abstractmethod",
     "raise NotImplementedError",
+]
+
+[dependency-groups]
+dev = [
+    "respx>=0.23.1",
 ]

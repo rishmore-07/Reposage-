@@ -5,6 +5,7 @@
  * Fetches and displays the user's connected GitHub repositories.
  */
 import { BookOpen, Plus } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import apiClient from "@/lib/api-client";
 import { QUERY_KEYS } from "@/constants/query-keys";
@@ -60,13 +61,14 @@ export function RepositoriesPage() {
           </p>
         </div>
 
-        <button
+        <Link
+          to="/repositories/connect"
           id="connect-repo-button"
           className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-md shadow-primary/25 transition-all hover:bg-primary/90"
         >
           <Plus className="h-4 w-4" />
           Connect repository
-        </button>
+        </Link>
       </div>
 
       {/* ── Content ──────────────────────────────────────────────────────── */}
@@ -93,13 +95,14 @@ export function RepositoriesPage() {
             Connect your GitHub repositories to start running AI-powered
             analysis and generating insights.
           </p>
-          <button
+          <Link
+            to="/repositories/connect"
             id="connect-first-repo-button"
             className="mt-6 flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-md shadow-primary/25 hover:bg-primary/90 transition-all"
           >
             <Plus className="h-4 w-4" />
             Connect your first repository
-          </button>
+          </Link>
         </div>
       )}
 
@@ -113,9 +116,9 @@ export function RepositoriesPage() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <BookOpen className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <span className="truncate font-medium text-foreground">
+                  <Link to={`/repositories/${repo.id}`} className="truncate font-medium text-foreground hover:underline">
                     {repo.full_name}
-                  </span>
+                  </Link>
                   {repo.is_private && (
                     <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                       Private

@@ -5,6 +5,7 @@ Structured logging configuration using structlog.
 Outputs JSON in production, colored text in development.
 Every log record includes: timestamp, level, logger, request_id, and message.
 """
+
 from __future__ import annotations
 
 import logging

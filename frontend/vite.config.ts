@@ -1,11 +1,18 @@
+/// <reference types="vitest" />
 import path from "path";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  // @ts-ignore - Type mismatch between Vite/Vitest and React plugin versions
   plugins: [react()],
+
+  // @ts-expect-error - vitest test config
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: './src/tests/setup.ts',
+  },
 
   // Path aliases — must match tsconfig.json paths
   resolve: {

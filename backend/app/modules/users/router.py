@@ -5,6 +5,7 @@ User endpoints:
 - GET /api/v1/users/me
 - PATCH /api/v1/users/me
 """
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends

@@ -87,11 +87,15 @@ export function TopBar() {
               "hover:bg-accent"
             )}
           >
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/20 text-xs font-bold text-primary">
-              {user?.full_name?.charAt(0)?.toUpperCase() ??
-                user?.email?.charAt(0)?.toUpperCase() ??
-                "U"}
-            </div>
+            {user?.avatar_url ? (
+              <img src={user.avatar_url} alt="Avatar" className="h-7 w-7 rounded-full object-cover border border-border" />
+            ) : (
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/20 text-xs font-bold text-primary">
+                {user?.full_name?.charAt(0)?.toUpperCase() ??
+                  user?.email?.charAt(0)?.toUpperCase() ??
+                  "U"}
+              </div>
+            )}
             <span className="hidden sm:inline-block max-w-[120px] truncate">
               {user?.full_name ?? user?.email ?? "User"}
             </span>

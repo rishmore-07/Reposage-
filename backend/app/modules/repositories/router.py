@@ -5,8 +5,8 @@ Repository endpoints:
 - GET  /api/v1/repositories         — List current user's repositories
 - POST /api/v1/repositories         — Connect a new repository
 - GET  /api/v1/repositories/{id}    — Get a repository by ID
-- POST /api/v1/repositories/{id}/analyze — Trigger analysis pipeline
 """
+
 from __future__ import annotations
 
 import uuid
@@ -15,11 +15,11 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import get_current_user, get_db
-from app.modules.users.models import User
-from app.core.schemas import MessageResponse
 from app.core.pagination import Page
+from app.modules.github.schemas import GitHubRepositoryListResponse
 from app.modules.repositories.schemas import RepositoryCreate, RepositoryRead
 from app.modules.repositories.service import RepositoryService
+from app.modules.users.models import User
 
 router = APIRouter()
 
@@ -57,6 +57,27 @@ async def list_repositories(
     )
 
 
+@router.get(
+    "/available",
+    response_model=GitHubRepositoryListResponse,
+    summary="List available GitHub repositories",
+    description="Returns repositories from GitHub that the current user has access to.",
+)
+async def list_available_repositories(
+    q: str | None = None,
+    page: int = 1,
+    per_page: int = 20,
+    current_user: User = Depends(get_current_user),
+    service: RepositoryService = Depends(get_repository_service),
+) -> GitHubRepositoryListResponse:
+    return await service.list_available_repositories(
+        current_user,
+        query=q,
+        page=page,
+        per_page=per_page,
+    )
+
+
 @router.post(
     "",
     response_model=RepositoryRead,
@@ -88,20 +109,18 @@ async def get_repository(
     return RepositoryRead.model_validate(repo)
 
 
-@router.post(
-    "/{repository_id}/analyze",
-    response_model=RepositoryRead,
-    status_code=status.HTTP_202_ACCEPTED,
-    summary="Trigger analysis pipeline",
-    description=(
-        "Queues the repository for AI analysis. Returns 202 Accepted immediately. "
-        "Poll the repository status field to track progress."
-    ),
+@router.delete(
+    "/{repository_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Disconnect a repository",
+    description="Removes the connection between the user and the repository.",
 )
-async def trigger_analysis(
+async def disconnect_repository(
     repository_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
     service: RepositoryService = Depends(get_repository_service),
-) -> RepositoryRead:
-    repo = await service.trigger_analysis(repository_id, current_user)
-    return RepositoryRead.model_validate(repo)
+) -> None:
+    await service.disconnect_repository(repository_id, current_user)
+
+
+

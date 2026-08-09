@@ -9,11 +9,11 @@ Task design:
 - Tasks use autoretry_for to handle transient failures (network issues, DB restarts)
 - All DB operations use the synchronous SQLAlchemy session (Celery is sync)
 """
+
 from __future__ import annotations
 
 import uuid
 
-from celery import shared_task
 from celery.utils.log import get_task_logger
 from sqlalchemy import create_engine, update
 from sqlalchemy.orm import Session
@@ -49,9 +49,7 @@ def _update_repo_status(
             values["last_commit_sha"] = commit_sha
 
         session.execute(
-            update(Repository)
-            .where(Repository.id == uuid.UUID(repo_id))
-            .values(**values)
+            update(Repository).where(Repository.id == uuid.UUID(repo_id)).values(**values)
         )
         session.commit()
 
@@ -62,8 +60,8 @@ def _update_repo_status(
     max_retries=3,
     default_retry_delay=60,  # Retry after 60 seconds
     autoretry_for=(Exception,),
-    retry_backoff=True,       # Exponential backoff between retries
-    retry_backoff_max=300,    # Max 5 minutes between retries
+    retry_backoff=True,  # Exponential backoff between retries
+    retry_backoff_max=300,  # Max 5 minutes between retries
 )
 def clone_repository(self: object, repo_id: str) -> dict[str, str]:
     """
@@ -122,9 +120,7 @@ def check_stale_repositories() -> None:
 
     with _get_sync_session() as session:
         ready_repos = (
-            session.query(Repository)
-            .filter(Repository.status == RepositoryStatus.READY)
-            .all()
+            session.query(Repository).filter(Repository.status == RepositoryStatus.READY).all()
         )
 
     logger.info(f"Found {len(ready_repos)} repositories in READY state")

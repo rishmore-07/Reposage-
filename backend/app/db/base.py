@@ -6,9 +6,10 @@ SQLAlchemy declarative base and shared metadata.
 All ORM models must import and inherit from Base defined here.
 This ensures Alembic can discover all tables via metadata.
 """
+
 from __future__ import annotations
 
-from sqlalchemy.orm import DeclarativeBase, MappedColumn
+from sqlalchemy.orm import DeclarativeBase
 
 
 class Base(DeclarativeBase):
@@ -24,3 +25,6 @@ class Base(DeclarativeBase):
     # - metadata: MetaData (used by Alembic)
     # - registry: maps Python classes to SQL tables
     pass
+
+# Import all models to ensure they are registered with Base.metadata
+# This prevents sqlalchemy.exc.NoReferencedTableError during create_all()

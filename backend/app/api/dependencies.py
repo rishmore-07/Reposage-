@@ -13,6 +13,7 @@ Why dependencies instead of imports?
 - Explicit: every route declares what it needs
 - Scoped: sessions are tied to request lifecycle automatically
 """
+
 from __future__ import annotations
 
 from collections.abc import AsyncGenerator
@@ -20,10 +21,10 @@ from collections.abc import AsyncGenerator
 from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import AppError, AuthenticationError
+from app.core.exceptions import AppError
 from app.db.session import get_db_session
-from app.modules.users.models import User
 from app.modules.auth.service import AuthService
+from app.modules.users.models import User
 
 
 async def get_db(

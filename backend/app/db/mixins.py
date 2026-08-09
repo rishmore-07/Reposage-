@@ -11,10 +11,11 @@ Using UUID primary keys:
 - Compatible with distributed inserts across shards
 - Globally unique across all tables (useful for audit logs)
 """
+
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime
 
 from sqlalchemy import DateTime, func
 from sqlalchemy.dialects.postgresql import UUID

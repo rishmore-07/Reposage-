@@ -9,10 +9,13 @@ Design decisions:
 - is_superuser flag for internal admin access
 - github_id for linking to GitHub OAuth accounts
 """
+
 from __future__ import annotations
 
-from sqlalchemy import Boolean, String
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from datetime import datetime
+
+from sqlalchemy import Boolean, DateTime, String
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
 from app.db.mixins import TimestampMixin, UUIDPrimaryKeyMixin
@@ -25,7 +28,7 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     # ── Identity ──────────────────────────────────────────────────────────────
     email: Mapped[str] = mapped_column(
-        String(320),   # RFC 5321 max email length
+        String(320),  # RFC 5321 max email length
         unique=True,
         index=True,
         nullable=False,
@@ -63,6 +66,18 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         String(255),
         nullable=True,
         comment="GitHub username (login)",
+    )
+
+    github_access_token: Mapped[str | None] = mapped_column(
+        String(2048),
+        nullable=True,
+        comment="Encrypted GitHub access token for Phase 2 API access",
+    )
+
+    last_login_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="Timestamp of the last successful login",
     )
 
     # ── Status flags ──────────────────────────────────────────────────────────

@@ -7,6 +7,7 @@ An Organization is a container for users and repositories.
 OrganizationMembership is the join table that links users to organizations
 with a role (owner, admin, member, viewer).
 """
+
 from __future__ import annotations
 
 import uuid

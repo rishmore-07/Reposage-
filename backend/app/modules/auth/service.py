@@ -9,7 +9,10 @@ This service:
 - Never imports from the API layer
 - Is injected into routes via FastAPI Depends()
 """
+
 from __future__ import annotations
+
+from datetime import UTC
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,10 +29,9 @@ from app.core.security import (
     hash_password,
     verify_password,
 )
+from app.modules.auth.schemas import LoginRequest, RegisterRequest, TokenResponse
 from app.modules.users.models import User
 from app.modules.users.repository import UserRepository
-from app.modules.auth.schemas import LoginRequest, RegisterRequest, TokenResponse
-from app.modules.users.schemas import UserCreate
 
 logger = get_logger(__name__)
 
@@ -143,3 +145,72 @@ class AuthService:
             raise AuthenticationError("User account is deactivated.")
 
         return user
+
+    async def login_or_register_github(
+        self, github_profile: dict, access_token: str
+    ) -> TokenResponse:
+        """
+        Authenticate a user with their GitHub profile, creating an account if necessary.
+        """
+        from datetime import datetime
+
+        from app.core.encryption import encrypt_string
+
+        github_id = github_profile.get("id")
+        email = github_profile.get("email")
+
+        if not github_id or not email:
+            raise InvalidCredentialsError("Incomplete GitHub profile data.")
+
+        from sqlalchemy import select
+
+        # Look up exclusively by github_id to prevent account takeover via email match
+        user = await self.user_repo.session.scalar(select(User).filter(User.github_id == github_id))
+
+        if not user:
+            # If the email is already in use by another account, we must NOT automatically link them.
+            # Doing so would allow an email-match account takeover if GitHub didn't verify the email properly,
+            # or it simply violates the principle of explicit intent.
+            existing_email_user = await self.user_repo.get_by_email(email)
+            if existing_email_user:
+                raise EmailAlreadyExistsError(
+                    "An account with this email already exists. Please log in using your password to link your GitHub account."
+                )
+
+        encrypted_token = encrypt_string(access_token)
+        now = datetime.now(UTC)
+
+        if user:
+            # Update existing user with GitHub info and token
+            user = await self.user_repo.update(
+                user,
+                github_id=github_id,
+                github_username=github_profile.get("login"),
+                github_access_token=encrypted_token,
+                last_login_at=now,
+                avatar_url=github_profile.get("avatar_url") or user.avatar_url,
+                full_name=github_profile.get("name") or user.full_name,
+            )
+        else:
+            # Create new user
+            user = await self.user_repo.create(
+                email=email,
+                full_name=github_profile.get("name"),
+            )
+            # update the rest which are not in UserCreate
+            user = await self.user_repo.update(
+                user,
+                github_id=github_id,
+                github_username=github_profile.get("login"),
+                github_access_token=encrypted_token,
+                last_login_at=now,
+                avatar_url=github_profile.get("avatar_url"),
+                is_email_verified=True,
+            )
+
+        logger.info("github_login_success", user_id=str(user.id), email=user.email)
+
+        return TokenResponse(
+            access_token=create_access_token(subject=user.id),
+            refresh_token=create_refresh_token(subject=user.id),
+        )

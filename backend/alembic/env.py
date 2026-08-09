@@ -11,6 +11,7 @@ Key decisions:
 4. target_metadata enables `alembic revision --autogenerate` to diff the DB schema
    against the ORM models and generate migration scripts automatically.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -31,17 +32,12 @@ if config.config_file_name is not None:
 # ── Import all models so their tables are registered on Base.metadata ─────────
 # This is what enables --autogenerate to detect new/changed/removed tables.
 from app.db.base import Base  # noqa: E402
-from app.modules.api_keys.models import ApiKey
-from app.modules.notifications.models import Notification
-from app.modules.organizations.models import Organization
-from app.modules.repositories.models import Repository
-from app.modules.users.models import User
 
 target_metadata = Base.metadata
 
 # ── Override DB URL from environment (never read from alembic.ini) ───────────
-# Using the SYNC URL because Alembic's connection is synchronous
-config.set_main_option("sqlalchemy.url", settings.database_sync_url)
+# Using the ASYNC URL because Alembic's connection is async in run_async_migrations
+config.set_main_option("sqlalchemy.url", settings.database_url)
 
 
 def run_migrations_offline() -> None:
@@ -72,6 +68,7 @@ def do_run_migrations(connection: Connection) -> None:
         target_metadata=target_metadata,
         compare_type=True,
         compare_server_default=True,
+        render_as_batch=True,
     )
     with context.begin_transaction():
         context.run_migrations()

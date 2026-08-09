@@ -10,6 +10,7 @@ Security design:
 - On creation: hash = SHA-256(raw_key); return raw_key once to user
 - On validation: compute SHA-256(incoming) and look up key_hash
 """
+
 from __future__ import annotations
 
 import uuid

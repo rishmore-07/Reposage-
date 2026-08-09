@@ -12,6 +12,7 @@ Why this exists before any AI implementation:
 Implement concrete agents in sibling files (e.g., pr_review_agent.py)
 extending this class.
 """
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod

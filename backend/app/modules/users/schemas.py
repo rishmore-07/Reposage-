@@ -6,6 +6,7 @@ Pydantic v2 schemas for user-related endpoints.
 Key design: UserRead never includes hashed_password.
 The ORM model has the password field; the schema is the safe projection.
 """
+
 from __future__ import annotations
 
 import uuid

@@ -9,6 +9,7 @@ Design principles:
 - HTTP error codes are string constants (not magic numbers scattered in handlers)
 - The global exception handler in middleware.py converts these to JSON responses
 """
+
 from __future__ import annotations
 
 from http import HTTPStatus
@@ -50,8 +51,10 @@ class AppError(Exception):
 
 # ── 400 Bad Request ───────────────────────────────────────────────────────────
 
+
 class ValidationError(AppError):
     """Request payload fails validation beyond Pydantic's built-in checks."""
+
     status_code = HTTPStatus.BAD_REQUEST.value
     error_code = "validation_error"
     message = "The request data is invalid."
@@ -59,6 +62,7 @@ class ValidationError(AppError):
 
 class BadRequestError(AppError):
     """Generic bad request when the client sends a malformed request."""
+
     status_code = HTTPStatus.BAD_REQUEST.value
     error_code = "bad_request"
     message = "Bad request."
@@ -66,8 +70,10 @@ class BadRequestError(AppError):
 
 # ── 401 Unauthorized ──────────────────────────────────────────────────────────
 
+
 class AuthenticationError(AppError):
     """Missing or invalid authentication credentials."""
+
     status_code = HTTPStatus.UNAUTHORIZED.value
     error_code = "authentication_required"
     message = "Authentication is required to access this resource."
@@ -75,6 +81,7 @@ class AuthenticationError(AppError):
 
 class InvalidTokenError(AppError):
     """JWT token is expired, malformed, or has an invalid signature."""
+
     status_code = HTTPStatus.UNAUTHORIZED.value
     error_code = "invalid_token"
     message = "The provided token is invalid or has expired."
@@ -82,6 +89,7 @@ class InvalidTokenError(AppError):
 
 class InvalidCredentialsError(AppError):
     """Email/password combination does not match any account."""
+
     status_code = HTTPStatus.UNAUTHORIZED.value
     error_code = "invalid_credentials"
     message = "Invalid email or password."
@@ -89,8 +97,10 @@ class InvalidCredentialsError(AppError):
 
 # ── 403 Forbidden ─────────────────────────────────────────────────────────────
 
+
 class PermissionDeniedError(AppError):
     """Authenticated user does not have permission to perform this action."""
+
     status_code = HTTPStatus.FORBIDDEN.value
     error_code = "permission_denied"
     message = "You do not have permission to perform this action."
@@ -98,8 +108,10 @@ class PermissionDeniedError(AppError):
 
 # ── 404 Not Found ─────────────────────────────────────────────────────────────
 
+
 class NotFoundError(AppError):
     """Requested resource does not exist."""
+
     status_code = HTTPStatus.NOT_FOUND.value
     error_code = "not_found"
     message = "The requested resource was not found."
@@ -122,8 +134,10 @@ class RepositoryNotFoundError(NotFoundError):
 
 # ── 409 Conflict ──────────────────────────────────────────────────────────────
 
+
 class ConflictError(AppError):
     """Resource already exists or state conflict."""
+
     status_code = HTTPStatus.CONFLICT.value
     error_code = "conflict"
     message = "A conflict occurred with the current state of the resource."
@@ -136,8 +150,10 @@ class EmailAlreadyExistsError(ConflictError):
 
 # ── 422 Unprocessable Entity ──────────────────────────────────────────────────
 
+
 class UnprocessableEntityError(AppError):
     """Request is well-formed but semantically invalid."""
+
     status_code = HTTPStatus.UNPROCESSABLE_ENTITY.value
     error_code = "unprocessable_entity"
     message = "The request could not be processed."
@@ -145,8 +161,10 @@ class UnprocessableEntityError(AppError):
 
 # ── 429 Too Many Requests ─────────────────────────────────────────────────────
 
+
 class RateLimitError(AppError):
     """Client has exceeded the rate limit."""
+
     status_code = HTTPStatus.TOO_MANY_REQUESTS.value
     error_code = "rate_limit_exceeded"
     message = "Too many requests. Please slow down."
@@ -154,8 +172,10 @@ class RateLimitError(AppError):
 
 # ── 503 Service Unavailable ───────────────────────────────────────────────────
 
+
 class ServiceUnavailableError(AppError):
     """Downstream service (DB, Redis, GitHub API) is temporarily unavailable."""
+
     status_code = HTTPStatus.SERVICE_UNAVAILABLE.value
     error_code = "service_unavailable"
     message = "A required service is temporarily unavailable."

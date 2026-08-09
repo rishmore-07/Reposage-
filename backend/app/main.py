@@ -12,20 +12,20 @@ This module creates the FastAPI application instance and wires together:
 Design principle: this file is a wiring module only.
 No business logic, no DB queries, no service calls.
 """
+
 from __future__ import annotations
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
 
 from app.api.router import api_router
 from app.core.config import settings
 from app.core.logging import configure_logging, get_logger
 from app.core.middleware import setup_exception_handlers, setup_middleware
-from app.db.init_db import check_db_connection, dispose_engine
 from app.core.schemas import HealthResponse
+from app.db.init_db import check_db_connection, dispose_engine
 
 logger = get_logger(__name__)
 

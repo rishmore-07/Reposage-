@@ -7,6 +7,7 @@ A Repository represents a GitHub repository that a user or organization
 has connected to RepoSage for analysis. The status field tracks where
 the repository is in the analysis pipeline.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -18,6 +19,30 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.core.constants import RepositoryStatus
 from app.db.base import Base
 from app.db.mixins import TimestampMixin, UUIDPrimaryKeyMixin
+
+
+class UserConnectedRepository(TimestampMixin, Base):
+    """
+    Association table linking Users to Repositories.
+    Allows multiple users to connect the same underlying GitHub repository
+    without duplicating the global repository state.
+    """
+    __tablename__ = "user_connected_repositories"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    repository_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("repositories.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+
+    def __repr__(self) -> str:
+        return f"<UserConnectedRepository user_id={self.user_id} repository_id={self.repository_id}>"
+
 
 
 class Repository(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -37,14 +62,6 @@ class Repository(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         nullable=True,
         index=True,
         comment="Organization that owns this repository (null for personal repos)",
-    )
-
-    owner_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-        comment="User who connected this repository",
     )
 
     # ── GitHub Metadata ────────────────────────────────────────────────────────

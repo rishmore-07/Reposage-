@@ -43,8 +43,12 @@ apiClient.interceptors.response.use(
   (response: AxiosResponse) => response,
   async (error: AxiosError<ApiError>) => {
     if (error.response?.status === 401) {
-      // Redirect to login if unauthorized
-      window.location.href = "/login";
+      // Clear auth state; the router's ProtectedRoute will handle redirecting to /login
+      // Avoid window.location.href as it causes full page reloads and infinite loops
+      // on initial load for public routes.
+      import("./auth-store").then(({ useAuthStore }) => {
+        useAuthStore.getState().setAuthenticated(false);
+      });
     }
     return Promise.reject(error);
   }

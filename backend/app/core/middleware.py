@@ -9,6 +9,7 @@ FastAPI middleware stack:
 
 All middleware is registered in main.py via setup_middleware().
 """
+
 from __future__ import annotations
 
 import time

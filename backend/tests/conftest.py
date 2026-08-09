@@ -9,26 +9,23 @@ Architecture:
 - client: An AsyncClient wrapping the FastAPI app for integration tests.
 - All fixtures use function scope (fresh state per test) by default.
 """
+
 from __future__ import annotations
 
 from collections.abc import AsyncGenerator
 
-import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.db.base import Base
-
-# Import all models so they register on Base.metadata before create_all
-from app.modules.api_keys.models import ApiKey
-from app.modules.notifications.models import Notification
-from app.modules.organizations.models import Organization
-from app.modules.repositories.models import Repository
-from app.modules.users.models import User
 from app.db.session import get_db_session
 from app.main import create_app
 
+# Import all models so they register on Base.metadata before create_all
+import app.modules.users.models  # noqa
+import app.modules.organizations.models  # noqa
+import app.modules.repositories.models  # noqa
 # In-memory SQLite for tests — no PostgreSQL required
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 

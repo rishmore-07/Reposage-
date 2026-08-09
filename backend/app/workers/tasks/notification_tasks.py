@@ -3,6 +3,7 @@ app/workers/tasks/notification_tasks.py
 
 Celery tasks for delivering notifications to users.
 """
+
 from __future__ import annotations
 
 from celery.utils.log import get_task_logger
@@ -66,9 +67,7 @@ def fan_out_notification(
     from app.core.config import settings
     from app.modules.notifications.models import Notification
 
-    logger.info(
-        f"Fan-out notification: {notification_type} to {len(user_ids)} users"
-    )
+    logger.info(f"Fan-out notification: {notification_type} to {len(user_ids)} users")
 
     import json
     import uuid

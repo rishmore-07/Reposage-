@@ -10,6 +10,7 @@ Implement concrete embedders in sibling files:
 The factory function in __init__.py selects the implementation based on
 config.ai_embedding_provider, allowing hot-swapping with a single config change.
 """
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
