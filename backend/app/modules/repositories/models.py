@@ -203,6 +203,13 @@ class RepositoryIngestion(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         comment="Current progress message of the ingestion",
     )
     
+    # ── Ingestion Metrics ─────────────────────────────────────────────────────
+    file_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    parsed_file_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    symbol_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    unsupported_file_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    parse_error_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    
     indexed_files: Mapped[list["IndexedFile"]] = relationship(
         "IndexedFile",
         back_populates="ingestion",
@@ -287,6 +294,12 @@ class IndexedFile(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         "RepositoryIngestion",
         back_populates="indexed_files",
     )
+    
+    code_symbols: Mapped[list["CodeSymbol"]] = relationship(
+        "CodeSymbol",
+        back_populates="indexed_file",
+        cascade="all, delete-orphan",
+    )
 
     __table_args__ = (
         Index(
@@ -299,3 +312,78 @@ class IndexedFile(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     def __repr__(self) -> str:
         return f"<IndexedFile id={self.id} path={self.relative_path!r} hash={self.file_hash[:8]}>"
+
+
+class CodeSymbol(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """
+    Structured code symbol extracted via Tree-sitter AST parsing.
+    Represents classes, functions, methods, imports, etc.
+    """
+
+    __tablename__ = "code_symbols"
+
+    indexed_file_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("indexed_files.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    parent_symbol_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("code_symbols.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+
+    name: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        index=True,
+    )
+
+    symbol_type: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+    )
+
+    language: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+    )
+
+    # ── Source Locations ──────────────────────────────────────────────────────
+    start_line: Mapped[int] = mapped_column(Integer, nullable=False)
+    start_column: Mapped[int] = mapped_column(Integer, nullable=False)
+    end_line: Mapped[int] = mapped_column(Integer, nullable=False)
+    end_column: Mapped[int] = mapped_column(Integer, nullable=False)
+    
+    start_byte: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    end_byte: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    signature: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Extracted signature (e.g. def func(args) -> Ret)",
+    )
+
+    # ── Relationships ─────────────────────────────────────────────────────────
+    indexed_file: Mapped["IndexedFile"] = relationship(
+        "IndexedFile",
+        back_populates="code_symbols",
+    )
+    
+    parent: Mapped["CodeSymbol"] = relationship(
+        "CodeSymbol",
+        remote_side="CodeSymbol.id",
+        back_populates="children",
+    )
+    
+    children: Mapped[list["CodeSymbol"]] = relationship(
+        "CodeSymbol",
+        back_populates="parent",
+        cascade="all, delete-orphan",
+    )
+
+    def __repr__(self) -> str:
+        return f"<CodeSymbol id={self.id} name={self.name} type={self.symbol_type}>"

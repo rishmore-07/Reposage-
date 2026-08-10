@@ -24,6 +24,13 @@ export interface RepositoryIngestion {
   completed_at: string | null;
   error_message: string | null;
   progress_message: string | null;
+  
+  // Metrics
+  file_count: number;
+  parsed_file_count: number;
+  symbol_count: number;
+  unsupported_file_count: number;
+  parse_error_count: number;
 }
 
 export interface GitHubRepository {

@@ -67,3 +67,10 @@ class RepositoryIngestionRead(BaseModel):
     completed_at: datetime | None = None
     error_message: str | None = None
     progress_message: str | None = None
+    
+    # Metrics
+    file_count: int = 0
+    parsed_file_count: int = 0
+    symbol_count: int = 0
+    unsupported_file_count: int = 0
+    parse_error_count: int = 0

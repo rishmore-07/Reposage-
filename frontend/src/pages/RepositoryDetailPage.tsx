@@ -137,6 +137,32 @@ export function RepositoryDetailPage() {
                     Current step: {ingestion.progress_message}
                   </p>
                 )}
+                
+                {ingestion?.status === "completed" && (
+                  <div className="mt-6 space-y-2 border-t border-border/50 pt-4 text-sm">
+                    <h3 className="font-medium text-foreground mb-3">Analysis Statistics</h3>
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Files discovered:</span>
+                      <span className="font-medium text-foreground">{ingestion.file_count}</span>
+                    </div>
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Files parsed:</span>
+                      <span className="font-medium text-foreground">{ingestion.parsed_file_count}</span>
+                    </div>
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Symbols extracted:</span>
+                      <span className="font-medium text-foreground">{ingestion.symbol_count}</span>
+                    </div>
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Unsupported files:</span>
+                      <span className="font-medium text-foreground">{ingestion.unsupported_file_count}</span>
+                    </div>
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Parse errors:</span>
+                      <span className="font-medium text-foreground">{ingestion.parse_error_count}</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {!ingestion || (ingestion.status !== "pending" && ingestion.status !== "running") ? (

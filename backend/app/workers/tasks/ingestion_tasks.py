@@ -21,11 +21,15 @@ from app.modules.repositories.models import (
     RepositoryIngestion,
     Repository,
     UserConnectedRepository,
-    IndexedFile
+    IndexedFile,
+    CodeSymbol,
 )
 from app.modules.users.models import User
 from app.modules.repositories.git_service import GitRepositoryService
 from app.modules.repositories.file_discovery import FileDiscoveryService
+from app.modules.indexing.language_detector import LanguageDetector
+from app.modules.indexing.parser_service import TreeSitterParser
+from app.modules.indexing.symbol_extractor import SymbolExtractorFactory
 from app.workers.celery_app import celery_app
 
 logger = get_task_logger(__name__)
@@ -137,7 +141,7 @@ def ingest_repository(self: object, ingestion_id: str) -> dict[str, str]:
             # 5. Batch insert IndexedFile records
             indexed_files_to_insert = [
                 IndexedFile(
-                    repository_id=repository.id,
+                    repository_id=ingestion.repository_id,
                     ingestion_id=ingestion.id,
                     relative_path=f["relative_path"],
                     file_size=f["file_size"],
@@ -150,15 +154,104 @@ def ingest_repository(self: object, ingestion_id: str) -> dict[str, str]:
             
             if indexed_files_to_insert:
                 session.add_all(indexed_files_to_insert)
+                session.commit()
+            
+        # 6. Parse and Extract
+        parser = TreeSitterParser()
+        
+        parsed_count = 0
+        unsupported_count = 0
+        error_count = 0
+        symbol_count = 0
+        
+        with _get_sync_session() as session:
+            ingestion = session.scalar(select(RepositoryIngestion).where(RepositoryIngestion.id == uuid.UUID(ingestion_id)))
+            
+            indexed_files = session.scalars(select(IndexedFile).where(IndexedFile.ingestion_id == ingestion.id)).all()
+            total_files = len(indexed_files)
+            
+            ingestion.file_count = total_files
+            ingestion.progress_message = f"Parsing source files (0/{total_files})"
+            session.commit()
+            
+            for i, idx_file in enumerate(indexed_files):
+                # Update progress periodically
+                if i % 10 == 0:
+                    ingestion.progress_message = f"Parsing source files ({i}/{total_files})"
+                    session.commit()
+                    
+                if idx_file.is_binary:
+                    continue
+                    
+                language = LanguageDetector.detect_language(idx_file.relative_path)
+                if language == "UNKNOWN":
+                    unsupported_count += 1
+                    continue
+                    
+                file_path = git_service.get_source_dir() / idx_file.relative_path
                 
+                try:
+                    with open(file_path, "rb") as f:
+                        source_code = f.read()
+                        
+                    parse_result = parser.parse(source_code, language)
+                    if parse_result.status == "FAILED":
+                        error_count += 1
+                        continue
+                        
+                    if parse_result.status == "UNSUPPORTED":
+                        unsupported_count += 1
+                        continue
+                        
+                    parsed_count += 1
+                    
+                    if parse_result.tree:
+                        extractor = SymbolExtractorFactory.get_extractor(language, source_code)
+                        extracted_symbols = extractor.extract(parse_result.tree.root_node)
+                        
+                        db_symbols = []
+                        # We need to map extractor UUIDs to actual DB objects for parent/child
+                        symbol_obj_map = {}
+                        
+                        for ext_sym in extracted_symbols:
+                            db_sym = CodeSymbol(
+                                id=ext_sym.id,
+                                indexed_file_id=idx_file.id,
+                                parent_symbol_id=ext_sym.parent_id,
+                                name=ext_sym.name,
+                                symbol_type=ext_sym.symbol_type,
+                                language=language,
+                                start_line=ext_sym.start_line,
+                                start_column=ext_sym.start_column,
+                                end_line=ext_sym.end_line,
+                                end_column=ext_sym.end_column,
+                                start_byte=ext_sym.start_byte,
+                                end_byte=ext_sym.end_byte,
+                                signature=ext_sym.signature,
+                            )
+                            db_symbols.append(db_sym)
+                            
+                        if db_symbols:
+                            session.add_all(db_symbols)
+                            symbol_count += len(db_symbols)
+                            session.commit()
+                            
+                except Exception as ex:
+                    logger.warning(f"Failed to process file {idx_file.relative_path}: {ex}")
+                    error_count += 1
+                    
+            ingestion.parsed_file_count = parsed_count
+            ingestion.unsupported_file_count = unsupported_count
+            ingestion.parse_error_count = error_count
+            ingestion.symbol_count = symbol_count
             ingestion.status = IngestionStatus.COMPLETED
             ingestion.progress_message = "Completed"
             ingestion.completed_at = datetime.now(UTC)
             session.commit()
             
-            logger.info(f"Ingestion {ingestion_id} status: COMPLETED. Discovered {len(discovered_files)} files.")
+            logger.info(f"Ingestion {ingestion_id} status: COMPLETED. Parsed {parsed_count}, Extracted {symbol_count} symbols.")
 
-        return {"status": "success", "ingestion_id": ingestion_id, "files_discovered": len(discovered_files)}
+        return {"status": "success", "ingestion_id": ingestion_id, "files_discovered": total_files}
 
     except Exception as exc:
         logger.error(f"Ingestion job {ingestion_id} failed: {exc}")
