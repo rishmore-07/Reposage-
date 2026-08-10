@@ -68,6 +68,13 @@ class Settings(BaseSettings):
     celery_accept_content: list[str] = ["json"]
     celery_timezone: str = "UTC"
 
+    # ── Workspace & Ingestion ─────────────────────────────────────────────────
+    repository_workspace_root: str = "./data/repositories"
+    max_file_size_bytes: int = 10485760       # 10 MB
+    max_repository_size_bytes: int = 524288000 # 500 MB
+    max_file_count: int = 10000
+    max_directory_depth: int = 20
+
     # ── CORS ──────────────────────────────────────────────────────────────────
     cors_origins: list[str] | str = ["http://localhost:5173", "http://localhost:3000"]
 

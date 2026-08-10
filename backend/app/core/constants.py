@@ -48,6 +48,15 @@ class RepositoryStatus(StrEnum):
     STALE = "stale"  # Repo has new commits — re-analysis needed
 
 
+class IngestionStatus(StrEnum):
+    """Status of a background ingestion job."""
+
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
 class NotificationType(StrEnum):
     """Notification event types."""
 

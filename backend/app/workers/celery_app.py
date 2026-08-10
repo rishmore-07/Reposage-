@@ -43,6 +43,7 @@ celery_app.conf.update(
     include=[
         "app.workers.tasks.repo_tasks",
         "app.workers.tasks.notification_tasks",
+        "app.workers.tasks.ingestion_tasks",
     ],
 )
 

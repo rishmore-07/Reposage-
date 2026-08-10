@@ -52,3 +52,18 @@ class RepositoryStatusUpdate(BaseModel):
     status: RepositoryStatus
     analysis_error: str | None = None
     last_commit_sha: str | None = None
+
+
+class RepositoryIngestionRead(BaseModel):
+    """Schema returned by the API for a repository ingestion job."""
+    
+    model_config = {"from_attributes": True}
+    
+    id: uuid.UUID
+    repository_id: uuid.UUID
+    status: str
+    created_at: datetime
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    error_message: str | None = None
+    progress_message: str | None = None

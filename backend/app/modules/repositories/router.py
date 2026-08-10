@@ -17,8 +17,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.dependencies import get_current_user, get_db
 from app.core.pagination import Page
 from app.modules.github.schemas import GitHubRepositoryListResponse
-from app.modules.repositories.schemas import RepositoryCreate, RepositoryRead
+from app.modules.repositories.schemas import RepositoryCreate, RepositoryRead, RepositoryIngestionRead
 from app.modules.repositories.service import RepositoryService
+from app.modules.repositories.ingestion_service import IngestionService
 from app.modules.users.models import User
 
 router = APIRouter()
@@ -27,6 +28,11 @@ router = APIRouter()
 def get_repository_service(db: AsyncSession = Depends(get_db)) -> RepositoryService:
     """Factory dependency for RepositoryService."""
     return RepositoryService(session=db)
+
+
+def get_ingestion_service(db: AsyncSession = Depends(get_db)) -> IngestionService:
+    """Factory dependency for IngestionService."""
+    return IngestionService(session=db)
 
 
 @router.get(
@@ -123,4 +129,38 @@ async def disconnect_repository(
     await service.disconnect_repository(repository_id, current_user)
 
 
+@router.post(
+    "/{repository_id}/ingest",
+    response_model=RepositoryIngestionRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Start repository ingestion",
+    description="Queues a background job to ingest the repository.",
+)
+async def start_ingestion(
+    repository_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    service: IngestionService = Depends(get_ingestion_service),
+) -> RepositoryIngestionRead:
+    ingestion = await service.create_ingestion(repository_id, current_user)
+    return RepositoryIngestionRead.model_validate(ingestion)
 
+
+@router.get(
+    "/{repository_id}/ingestion",
+    response_model=RepositoryIngestionRead,
+    summary="Get latest ingestion status",
+    description="Returns the status of the most recent ingestion job.",
+)
+async def get_ingestion_status(
+    repository_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    service: IngestionService = Depends(get_ingestion_service),
+) -> RepositoryIngestionRead:
+    from fastapi import HTTPException
+    
+    await service.verify_access(repository_id, current_user)
+    ingestion = await service.get_latest_ingestion(repository_id)
+    if not ingestion:
+        raise HTTPException(status_code=404, detail="No ingestion found for this repository.")
+    
+    return RepositoryIngestionRead.model_validate(ingestion)

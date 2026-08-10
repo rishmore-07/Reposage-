@@ -15,6 +15,17 @@ export interface Repository {
   created_at: string;
 }
 
+export interface RepositoryIngestion {
+  id: string;
+  repository_id: string;
+  status: "pending" | "running" | "completed" | "failed";
+  created_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+  error_message: string | null;
+  progress_message: string | null;
+}
+
 export interface GitHubRepository {
   id: number;
   full_name: string;
@@ -86,5 +97,39 @@ export const useRepository = (id: string) => {
       return data;
     },
     enabled: !!id,
+  });
+};
+
+export const useStartIngestion = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (repository_id: string) => {
+      const { data } = await apiClient.post<RepositoryIngestion>(`/api/v1/repositories/${repository_id}/ingest`);
+      return data;
+    },
+    onSuccess: (_, repository_id) => {
+      queryClient.invalidateQueries({ queryKey: ["repositories", "ingestion", repository_id] });
+    },
+  });
+};
+
+export const useIngestionStatus = (repository_id: string) => {
+  return useQuery({
+    queryKey: ["repositories", "ingestion", repository_id],
+    queryFn: async () => {
+      const { data } = await apiClient.get<RepositoryIngestion>(`/api/v1/repositories/${repository_id}/ingestion`);
+      return data;
+    },
+    enabled: !!repository_id,
+    retry: false, // Don't retry automatically if 404
+    refetchInterval: (query) => {
+      // Poll every 3 seconds if status is pending or running
+      const state = query.state.data;
+      if (state && (state.status === "pending" || state.status === "running")) {
+        return 3000;
+      }
+      return false;
+    },
   });
 };

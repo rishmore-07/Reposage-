@@ -32,6 +32,11 @@ if config.config_file_name is not None:
 # ── Import all models so their tables are registered on Base.metadata ─────────
 # This is what enables --autogenerate to detect new/changed/removed tables.
 from app.db.base import Base  # noqa: E402
+from app.modules.users.models import User
+from app.modules.organizations.models import Organization, OrganizationMembership
+from app.modules.api_keys.models import ApiKey
+from app.modules.notifications.models import Notification, AuditLog
+from app.modules.repositories.models import Repository, UserConnectedRepository, RepositoryIngestion
 
 target_metadata = Base.metadata
 

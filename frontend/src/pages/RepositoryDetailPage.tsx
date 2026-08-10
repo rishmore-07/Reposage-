@@ -1,6 +1,6 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Github, Trash2, Shield, Calendar, GitBranch, AlertTriangle } from "lucide-react";
-import { useRepository, useDisconnectRepository } from "@/features/repositories/api";
+import { ArrowLeft, Github, Trash2, Shield, Calendar, GitBranch, AlertTriangle, PlayCircle, Loader2, CheckCircle, XCircle } from "lucide-react";
+import { useRepository, useDisconnectRepository, useStartIngestion, useIngestionStatus } from "@/features/repositories/api";
 import { LoadingSpinner } from "@/components/feedback/LoadingSpinner";
 import { ROUTES } from "@/constants/routes";
 
@@ -10,6 +10,8 @@ export function RepositoryDetailPage() {
 
   const { data: repo, isLoading, isError } = useRepository(repositoryId || "");
   const disconnectMutation = useDisconnectRepository();
+  const startIngestionMutation = useStartIngestion();
+  const { data: ingestion } = useIngestionStatus(repositoryId || "");
 
   if (isLoading) {
     return <LoadingSpinner fullPage label="Loading repository details..." />;
@@ -28,6 +30,10 @@ export function RepositoryDetailPage() {
       await disconnectMutation.mutateAsync(repo.id);
       navigate(ROUTES.REPOSITORIES);
     }
+  };
+
+  const handleStartAnalysis = async () => {
+    await startIngestionMutation.mutateAsync(repo.id);
   };
 
   return (
@@ -106,22 +112,52 @@ export function RepositoryDetailPage() {
             
             <div className="space-y-4">
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Current State</p>
-                <div className="inline-flex items-center rounded-full bg-muted px-3 py-1 text-sm font-medium capitalize">
-                  {repo.status}
+                <p className="text-sm text-muted-foreground mb-1">Ingestion Status</p>
+                <div className="flex items-center gap-2">
+                  {ingestion ? (
+                    <div className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium capitalize
+                      ${ingestion.status === "completed" ? "bg-green-500/10 text-green-500 border border-green-500/20" : ""}
+                      ${ingestion.status === "failed" ? "bg-destructive/10 text-destructive border border-destructive/20" : ""}
+                      ${(ingestion.status === "pending" || ingestion.status === "running") ? "bg-blue-500/10 text-blue-500 border border-blue-500/20" : ""}
+                    `}>
+                      {(ingestion.status === "pending" || ingestion.status === "running") && <Loader2 className="h-4 w-4 animate-spin" />}
+                      {ingestion.status === "completed" && <CheckCircle className="h-4 w-4" />}
+                      {ingestion.status === "failed" && <XCircle className="h-4 w-4" />}
+                      {ingestion.status}
+                    </div>
+                  ) : (
+                    <div className="inline-flex items-center rounded-full bg-muted px-3 py-1 text-sm font-medium text-muted-foreground">
+                      Not Started
+                    </div>
+                  )}
                 </div>
+                
+                {ingestion?.progress_message && (
+                  <p className="text-xs text-muted-foreground mt-2 animate-pulse">
+                    Current step: {ingestion.progress_message}
+                  </p>
+                )}
               </div>
 
-              {repo.status === "pending" && (
-                <div className="rounded-lg bg-blue-500/10 p-3 text-sm text-blue-500 border border-blue-500/20">
-                  <p>Repository is connected. Analysis is not yet available in Phase 2.</p>
-                </div>
-              )}
+              {!ingestion || (ingestion.status !== "pending" && ingestion.status !== "running") ? (
+                <button
+                  onClick={handleStartAnalysis}
+                  disabled={startIngestionMutation.isPending}
+                  className="w-full flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-all disabled:opacity-50"
+                >
+                  {startIngestionMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <PlayCircle className="h-4 w-4" />
+                  )}
+                  Start Analysis
+                </button>
+              ) : null}
 
-              {repo.status === "failed" && repo.analysis_error && (
+              {ingestion?.status === "failed" && ingestion.error_message && (
                 <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive border border-destructive/20 flex gap-2">
                   <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-                  <p>{repo.analysis_error}</p>
+                  <p>{ingestion.error_message}</p>
                 </div>
               )}
             </div>
