@@ -96,8 +96,16 @@ async def connect_repository(
     current_user: User = Depends(get_current_user),
     service: RepositoryService = Depends(get_repository_service),
 ) -> RepositoryRead:
-    repo = await service.connect_repository(data, current_user)
-    return RepositoryRead.model_validate(repo)
+    import traceback
+    try:
+        repo = await service.connect_repository(data, current_user)
+        return RepositoryRead.model_validate(repo)
+    except Exception as exc:
+        import logging
+        logging.getLogger("app.repositories.router").error(
+            f"connect_repository FAILED: {type(exc).__name__}: {exc}\n{traceback.format_exc()}"
+        )
+        raise
 
 
 @router.get(

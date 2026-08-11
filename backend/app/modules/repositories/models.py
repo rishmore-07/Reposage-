@@ -59,7 +59,6 @@ class Repository(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # ── Ownership ─────────────────────────────────────────────────────────────
     organization_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("organizations.id", ondelete="CASCADE"),
         nullable=True,
         index=True,
         comment="Organization that owns this repository (null for personal repos)",
@@ -120,7 +119,7 @@ class Repository(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         comment="Current analysis pipeline status",
     )
 
-    last_analyzed_at: Mapped[uuid.UUID | None] = mapped_column(
+    last_analyzed_at: Mapped[datetime | None] = mapped_column(
         nullable=True,
         comment="Timestamp of the last successful analysis completion",
     )

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import uuid
 
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import PermissionDeniedError, RepositoryNotFoundError
@@ -39,7 +40,13 @@ class RepositoryService:
         per_page: int = 20,
     ) -> GitHubRepositoryListResponse:
         """List repositories available for the user to connect to."""
-        github_service = GitHubService(current_user)
+        try:
+            github_service = GitHubService(current_user)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail="Your account is not connected to GitHub. Please log in via GitHub OAuth to use this feature.",
+            )
         return await github_service.get_available_repositories(query=query, page=page, per_page=per_page)
 
     async def connect_repository(
@@ -51,7 +58,13 @@ class RepositoryService:
         Register a new repository for analysis.
         Verifies access via GitHub API first.
         """
-        github_service = GitHubService(current_user)
+        try:
+            github_service = GitHubService(current_user)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail="Your account is not connected to GitHub. Please log in via GitHub OAuth to use this feature.",
+            )
 
         # 1. Fetch and verify from GitHub
         github_metadata = await github_service.get_repository_metadata(data.github_repo_id)
@@ -68,7 +81,7 @@ class RepositoryService:
                 name=github_metadata.name,
                 description=github_metadata.description,
                 html_url=github_metadata.html_url,
-                default_branch=github_metadata.default_branch,
+                default_branch=github_metadata.default_branch or "main",
                 is_private=github_metadata.private,
             )
 
@@ -78,6 +91,7 @@ class RepositoryService:
             await self.repo_repo.create_connection(current_user.id, repo.id)
 
         await self.session.commit()
+        await self.session.refresh(repo)
 
         logger.info(
             "repository_connected",

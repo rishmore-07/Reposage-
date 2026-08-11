@@ -34,14 +34,24 @@ class TreeSitterParser:
         if lang_name in self._languages:
             return self._languages[lang_name]
 
-        # e.g., 'tree-sitter-python'
-        # The python package is typically imported as tree_sitter_python
         module_name = f"tree_sitter_{lang_name}"
-        
+
         try:
             module = importlib.import_module(module_name)
-            # Modern tree-sitter bindings provide a `language()` function
-            ts_language = tree_sitter.Language(module.language())
+
+            # tree-sitter-typescript exposes language_typescript() / language_tsx()
+            # instead of the standard language() function
+            if lang_name == "typescript":
+                if hasattr(module, "language_typescript"):
+                    ts_language = tree_sitter.Language(module.language_typescript())
+                elif hasattr(module, "language"):
+                    ts_language = tree_sitter.Language(module.language())
+                else:
+                    logger.error(f"Cannot find language function in {module_name}")
+                    return None
+            else:
+                ts_language = tree_sitter.Language(module.language())
+
             self._languages[lang_name] = ts_language
             return ts_language
         except ImportError:

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Search, Github, ArrowLeft, Check, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { useAvailableRepositories, useConnectRepository } from "@/features/repositories/api";
 import { LoadingSpinner } from "@/components/feedback/LoadingSpinner";
 import { QUERY_KEYS } from "@/constants/query-keys";
@@ -15,8 +16,25 @@ export function ConnectRepositoryPage() {
   // Debounced search could be added here, but for simplicity we'll just trigger on button or enter
   const [activeQuery, setActiveQuery] = useState("");
 
-  const { data: availableData, isLoading, isError } = useAvailableRepositories(activeQuery, page);
+  const { data: availableData, isLoading, isError: isAvailableError } = useAvailableRepositories(activeQuery, page);
   const connectMutation = useConnectRepository();
+  const navigate = useNavigate();
+  const [connectError, setConnectError] = useState<string | null>(null);
+
+  const handleConnect = async (github_repo_id: number) => {
+    setConnectError(null);
+    try {
+      const newRepo = await connectMutation.mutateAsync(github_repo_id);
+      navigate(`/repositories/${newRepo.id}`);
+    } catch (err: any) {
+      // Axios wraps the response under err.response.data
+      const detail =
+        err?.response?.data?.detail ||
+        err?.message ||
+        "Failed to connect repository. Please try again.";
+      setConnectError(detail);
+    }
+  };
 
   // Fetch already connected repos to show "Connected" state
   const { data: connectedData } = useQuery({
@@ -82,13 +100,23 @@ export function ConnectRepositoryPage() {
         </div>
       )}
 
-      {isError && (
-        <div className="glass-card rounded-xl p-6 text-center text-destructive">
-          Failed to fetch repositories from GitHub. Are you logged in via GitHub?
+      {isAvailableError && (
+        <div className="glass-card rounded-xl p-6 text-center border border-destructive/30 bg-destructive/5">
+          <p className="text-destructive font-medium mb-2">Could not load your GitHub repositories</p>
+          <p className="text-sm text-muted-foreground">
+            This usually means your account is not connected to GitHub.<br />
+            Please <Link to="/auth/login" className="text-primary underline">log in via GitHub OAuth</Link> to access this feature.
+          </p>
         </div>
       )}
 
-      {!isLoading && !isError && availableData && (
+      {connectError && (
+        <div className="glass-card rounded-xl p-4 mb-6 text-center text-destructive bg-destructive/10 border-destructive/20">
+          {connectError}
+        </div>
+      )}
+
+      {!isLoading && !isAvailableError && availableData && (
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground mb-2">
             Showing {availableData.items.length} repositories
@@ -135,7 +163,7 @@ export function ConnectRepositoryPage() {
                       </button>
                     ) : (
                       <button
-                        onClick={() => connectMutation.mutate(repo.id)}
+                        onClick={() => handleConnect(repo.id)}
                         disabled={isConnecting}
                         className="flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/20 transition-colors disabled:opacity-50"
                       >

@@ -18,7 +18,7 @@ class GitHubRepository(BaseModel):
     html_url: str = Field(...)
     clone_url: str = Field(...)
     ssh_url: str = Field(...)
-    default_branch: str = Field(...)
+    default_branch: str | None = Field(default="main")
     language: str | None = None
     stargazers_count: int = Field(default=0)
     forks_count: int = Field(default=0)
