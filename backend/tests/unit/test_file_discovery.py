@@ -39,7 +39,7 @@ def test_file_discovery_basic(tmp_path: Path):
     assert "key.pem" not in paths
 
 
-def test_file_discovery_symlink_escape(tmp_path: Path):
+def test_file_discovery_symlink_escape(tmp_path: Path, monkeypatch):
     """Test that symlinks escaping the workspace are skipped."""
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
@@ -49,10 +49,23 @@ def test_file_discovery_symlink_escape(tmp_path: Path):
     
     # Symlink escaping root
     symlink_path = repo_root / "escape_link.txt"
-    try:
-        os.symlink(outside_file, symlink_path)
-    except OSError:
-        pytest.skip("Symlinks not supported by OS/user permissions")
+    symlink_path.write_text("fake link", encoding="utf-8")
+    
+    original_is_symlink = Path.is_symlink
+    original_resolve = Path.resolve
+    
+    def mock_is_symlink(self):
+        if self.name == "escape_link.txt":
+            return True
+        return original_is_symlink(self)
+        
+    def mock_resolve(self, strict=False):
+        if self.name == "escape_link.txt":
+            return outside_file.resolve(strict=strict)
+        return original_resolve(self, strict=strict)
+        
+    monkeypatch.setattr(Path, "is_symlink", mock_is_symlink)
+    monkeypatch.setattr(Path, "resolve", mock_resolve)
         
     service = FileDiscoveryService(repo_root)
     discovered = service.discover_files()
