@@ -93,14 +93,26 @@ class Settings(BaseSettings):
     github_client_id: str | None = None
     github_client_secret: str | None = None
 
-    # ── AI / LLM ──────────────────────────────────────────────────────────────
-    ai_embedding_provider: Literal["gemini", "openai"] = "gemini"
-    gemini_api_key: str | None = None
-    openai_api_key: str | None = None
+    # ── Embeddings ────────────────────────────────────────────────────────────
+    embedding_provider: Literal["ollama", "gemini"] = "ollama"
+    embedding_model: str = "nomic-embed-text:latest"
+    embedding_base_url: str = "http://localhost:11434"
+    embedding_api_key: str | None = None
+    embedding_dimension: int = 768
+    embedding_batch_size: int = 32
 
     # ── Vector Store ──────────────────────────────────────────────────────────
-    qdrant_host: str = "localhost"
-    qdrant_port: int = 6333
+    qdrant_url: str = "http://localhost:6333"
+    qdrant_api_key: str | None = None
+    qdrant_collection: str = "code_chunks"
+
+    # ── Search ────────────────────────────────────────────────────────────────
+    search_mode: Literal["semantic", "keyword", "hybrid"] = "hybrid"
+    semantic_candidate_k: int = 50
+    keyword_candidate_k: int = 50
+    hybrid_top_k: int = 10
+    rrf_k: int = 60
+    keyword_index_dir: str = "./data/keyword_indices"
 
     # ── Logging ───────────────────────────────────────────────────────────────
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"

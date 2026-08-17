@@ -1,0 +1,40 @@
+/usr/local/lib/python3.12/site-packages/celery/platforms.py:841: SecurityWarning: You're running the worker with superuser privileges: this is
+absolutely not recommended!
+
+Please specify a different user using the --uid option.
+
+User information: uid=0 euid=0 gid=0 egid=0
+
+  warnings.warn(SecurityWarning(ROOT_DISCOURAGED.format(
+ 
+ -------------- celery@2fcdb276533f v5.6.3 (recovery)
+--- ***** ----- 
+-- ******* ---- Linux-6.6.114.1-microsoft-standard-WSL2-x86_64-with-glibc2.41 2026-08-16 14:13:51
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         reposage:0x72a007689670
+- ** ---------- .> transport:   redis://redis:6379/0
+- ** ---------- .> results:     redis://redis:6379/1
+- *** --- * --- .> concurrency: 2 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . app.workers.tasks.ingestion_tasks.ingest_repository
+  . app.workers.tasks.notification_tasks.fan_out_notification
+  . app.workers.tasks.notification_tasks.send_email_notification
+  . app.workers.tasks.repo_tasks.check_stale_repositories
+  . app.workers.tasks.repo_tasks.clone_repository
+
+[2026-08-16 14:13:51,805: INFO/MainProcess] Connected to redis://redis:6379/0
+[2026-08-16 14:13:51,810: INFO/MainProcess] mingle: searching for neighbors
+[2026-08-16 14:13:52,821: INFO/MainProcess] mingle: all alone
+[2026-08-16 14:13:52,838: INFO/MainProcess] celery@2fcdb276533f ready.
+[2026-08-16 14:13:56,373: INFO/MainProcess] Events of group {task} enabled by remote.
+[2026-08-16 18:09:30,973: INFO/MainProcess] Task app.workers.tasks.repo_tasks.check_stale_repositories[87c133ac-4744-46c8-b175-f6fa64d2a7d9] received
+[2026-08-16 18:09:31,404: INFO/ForkPoolWorker-2] app.workers.tasks.repo_tasks.check_stale_repositories[87c133ac-4744-46c8-b175-f6fa64d2a7d9]: Running stale repository check
+[2026-08-16 18:09:33,694: INFO/ForkPoolWorker-2] app.workers.tasks.repo_tasks.check_stale_repositories[87c133ac-4744-46c8-b175-f6fa64d2a7d9]: Found 0 repositories in READY state
+[2026-08-16 18:09:33,727: INFO/ForkPoolWorker-2] Task app.workers.tasks.repo_tasks.check_stale_repositories[87c133ac-4744-46c8-b175-f6fa64d2a7d9] succeeded in 2.396032514999888s: None

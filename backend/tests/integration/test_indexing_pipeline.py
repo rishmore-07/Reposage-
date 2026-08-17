@@ -18,6 +18,8 @@ from app.modules.users.models import User
 from app.core.constants import IngestionStatus
 from app.core.encryption import encrypt_string
 from app.workers.tasks.ingestion_tasks import ingest_repository, _get_sync_session
+from app.modules.vectorstore.qdrant_service import QdrantService
+from app.modules.embeddings.factory import EmbeddingFactory
 
 @pytest.fixture
 def mock_git_service(monkeypatch, tmp_path: Path):
@@ -51,6 +53,28 @@ def mock_git_service(monkeypatch, tmp_path: Path):
             pass
 
     monkeypatch.setattr("app.workers.tasks.ingestion_tasks.GitRepositoryService", MockGitService)
+
+@pytest.fixture
+def mock_phase3d_services(monkeypatch):
+    class MockEmbeddingProvider:
+        async def embed_documents(self, texts):
+            return [[0.1] * 768 for _ in texts]
+        async def embed_query(self, text):
+            return [0.1] * 768
+            
+    class MockEmbeddingFactory:
+        @staticmethod
+        def get_provider():
+            return MockEmbeddingProvider()
+
+    class MockQdrantService:
+        async def initialize_collection(self):
+            pass
+        async def upsert_vectors(self, vectors, payloads):
+            pass
+
+    monkeypatch.setattr("app.workers.tasks.ingestion_tasks.EmbeddingFactory", MockEmbeddingFactory)
+    monkeypatch.setattr("app.workers.tasks.ingestion_tasks.QdrantService", MockQdrantService)
 
 
 @pytest.fixture
@@ -92,7 +116,7 @@ def setup_ingestion_db() -> tuple[uuid.UUID, uuid.UUID]:
         db_session.close()
 
 
-def test_indexing_pipeline(mock_git_service, setup_ingestion_db):
+def test_indexing_pipeline(mock_git_service, mock_phase3d_services, setup_ingestion_db):
     repo_id, ingestion_id = setup_ingestion_db
     
     # Run the Celery task synchronously

@@ -110,6 +110,13 @@ class Repository(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         comment="True if the repository is private on GitHub",
     )
 
+    index_version: Mapped[int] = mapped_column(
+        Integer,
+        default=1,
+        nullable=False,
+        comment="Schema version for vector and BM25 indices",
+    )
+
     # ── Analysis State ────────────────────────────────────────────────────────
     status: Mapped[str] = mapped_column(
         String(50),
@@ -386,3 +393,107 @@ class CodeSymbol(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     def __repr__(self) -> str:
         return f"<CodeSymbol id={self.id} name={self.name} type={self.symbol_type}>"
+
+
+class CodeChunk(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """
+    A semantic chunk of code, ready to be embedded and indexed in Qdrant.
+    It contains metadata linking back to the original file and symbol.
+    """
+
+    __tablename__ = "code_chunks"
+
+    indexed_file_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("indexed_files.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    code_symbol_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("code_symbols.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+
+    parent_chunk_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("code_chunks.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+
+    content: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        comment="The actual text content to be embedded",
+    )
+
+    chunk_type: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        comment="e.g., 'class', 'function', 'file', 'method'",
+    )
+
+    symbol_name: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Name of the semantic symbol, if applicable",
+    )
+
+    language: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+    )
+
+    start_line: Mapped[int] = mapped_column(Integer, nullable=False)
+    end_line: Mapped[int] = mapped_column(Integer, nullable=False)
+    start_byte: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    end_byte: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    
+    # ── Structural Context ────────────────────────────────────────────────────
+    class_name: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+        comment="Name of the enclosing class or struct, if any",
+    )
+    parent_symbol: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+        comment="Name of the immediate parent symbol, if any",
+    )
+    module_name: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+        comment="Derived module/package name based on file path",
+    )
+    context_path: Mapped[str | None] = mapped_column(
+        String(512),
+        nullable=True,
+        comment="Deterministic dot-separated path (e.g. ClassName.method_name)",
+    )
+
+    content_hash: Mapped[str] = mapped_column(
+        String(64),
+        nullable=False,
+        index=True,
+        comment="SHA-256 hash of the content to detect unchanged chunks during re-indexing",
+    )
+
+    # ── Relationships ─────────────────────────────────────────────────────────
+    indexed_file: Mapped["IndexedFile"] = relationship(
+        "IndexedFile",
+    )
+
+    code_symbol: Mapped["CodeSymbol"] = relationship(
+        "CodeSymbol",
+    )
+
+    parent_chunk: Mapped["CodeChunk"] = relationship(
+        "CodeChunk",
+        remote_side="CodeChunk.id",
+    )
+
+    def __repr__(self) -> str:
+        return f"<CodeChunk id={self.id} type={self.chunk_type} file_id={self.indexed_file_id}>"

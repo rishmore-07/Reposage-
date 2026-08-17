@@ -26,11 +26,11 @@ export function ConnectRepositoryPage() {
     try {
       const newRepo = await connectMutation.mutateAsync(github_repo_id);
       navigate(`/repositories/${newRepo.id}`);
-    } catch (err: any) {
-      // Axios wraps the response under err.response.data
+    } catch (err) {
+      const error = err as { response?: { data?: { detail?: string } }; message?: string };
       const detail =
-        err?.response?.data?.detail ||
-        err?.message ||
+        error?.response?.data?.detail ||
+        error?.message ||
         "Failed to connect repository. Please try again.";
       setConnectError(detail);
     }

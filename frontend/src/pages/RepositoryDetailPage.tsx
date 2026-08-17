@@ -1,6 +1,7 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Github, Trash2, Shield, Calendar, GitBranch, AlertTriangle, PlayCircle, Loader2, CheckCircle, XCircle } from "lucide-react";
-import { useRepository, useDisconnectRepository, useStartIngestion, useIngestionStatus } from "@/features/repositories/api";
+import { useState } from "react";
+import { ArrowLeft, Github, Trash2, Shield, Calendar, GitBranch, AlertTriangle, PlayCircle, Loader2, CheckCircle, XCircle, Search } from "lucide-react";
+import { useRepository, useDisconnectRepository, useStartIngestion, useIngestionStatus, useSemanticSearch } from "@/features/repositories/api";
 import { LoadingSpinner } from "@/components/feedback/LoadingSpinner";
 import { ROUTES } from "@/constants/routes";
 
@@ -12,6 +13,8 @@ export function RepositoryDetailPage() {
   const disconnectMutation = useDisconnectRepository();
   const startIngestionMutation = useStartIngestion();
   const { data: ingestion } = useIngestionStatus(repositoryId || "");
+  const searchMutation = useSemanticSearch();
+  const [searchQuery, setSearchQuery] = useState("");
 
   if (isLoading) {
     return <LoadingSpinner fullPage label="Loading repository details..." />;
@@ -34,6 +37,12 @@ export function RepositoryDetailPage() {
 
   const handleStartAnalysis = async () => {
     await startIngestionMutation.mutateAsync(repo.id);
+  };
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+    await searchMutation.mutateAsync({ repository_id: repo.id, query: searchQuery });
   };
 
   return (
@@ -101,6 +110,63 @@ export function RepositoryDetailPage() {
               </div>
             </div>
           </div>
+
+          {/* Semantic Search Section */}
+          {ingestion?.status === "completed" && (
+            <div className="glass-card p-6 rounded-xl">
+              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Search className="h-5 w-5 text-primary" />
+                Semantic Code Search
+              </h2>
+              <form onSubmit={handleSearch} className="flex gap-3 mb-6">
+                <input
+                  type="text"
+                  placeholder="e.g., 'What handles GitHub OAuth?'"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="flex-1 rounded-lg border border-border/50 bg-background/50 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  disabled={searchMutation.isPending}
+                />
+                <button
+                  type="submit"
+                  disabled={searchMutation.isPending || !searchQuery.trim()}
+                  className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2"
+                >
+                  {searchMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Search"}
+                </button>
+              </form>
+
+              {searchMutation.data?.results && (
+                <div className="space-y-4">
+                  {searchMutation.data.results.length === 0 ? (
+                    <p className="text-muted-foreground text-sm">No results found.</p>
+                  ) : (
+                    searchMutation.data.results.map((result) => (
+                      <div key={result.chunk_id} className="border border-border/50 rounded-lg p-4 bg-muted/20">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <p className="text-sm font-medium text-foreground">{result.file_path}</p>
+                            {result.symbol_name && (
+                              <p className="text-xs text-muted-foreground">{result.chunk_type}: {result.symbol_name}</p>
+                            )}
+                          </div>
+                          <span className="text-xs font-medium bg-primary/10 text-primary px-2 py-1 rounded-full">
+                            Score: {result.score.toFixed(2)}
+                          </span>
+                        </div>
+                        <pre className="mt-3 p-3 bg-background/50 rounded text-xs overflow-x-auto border border-border/30">
+                          <code>{result.content}</code>
+                        </pre>
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          Language: {result.language} • Lines: {result.start_line}-{result.end_line}
+                        </p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Right Column - Status */}

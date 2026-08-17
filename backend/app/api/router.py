@@ -17,6 +17,7 @@ from fastapi import APIRouter
 from app.modules.auth.router import router as auth_router
 from app.modules.repositories.router import router as repositories_router
 from app.modules.users.router import router as users_router
+from app.modules.retrieval.router import router as retrieval_router
 
 # Root API router — mounted at /api in main.py
 api_router = APIRouter()
@@ -38,4 +39,10 @@ api_router.include_router(
     repositories_router,
     prefix="/v1/repositories",
     tags=["Repositories"],
+)
+
+api_router.include_router(
+    retrieval_router,
+    prefix="/v1",
+    tags=["Retrieval"],
 )

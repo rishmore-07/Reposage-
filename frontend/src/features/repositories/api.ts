@@ -140,3 +140,34 @@ export const useIngestionStatus = (repository_id: string) => {
     },
   });
 };
+
+export interface RetrievedChunk {
+  chunk_id: string;
+  repository_id: string;
+  indexed_file_id: string;
+  code_symbol_id?: string | null;
+  file_path: string;
+  language: string;
+  chunk_type: string;
+  symbol_name: string | null;
+  start_line: number;
+  end_line: number;
+  content: string;
+  score: number;
+}
+
+export interface SearchQueryResponse {
+  results: RetrievedChunk[];
+}
+
+export const useSemanticSearch = () => {
+  return useMutation({
+    mutationFn: async ({ repository_id, query, top_k = 10 }: { repository_id: string; query: string; top_k?: number }) => {
+      const { data } = await apiClient.post<SearchQueryResponse>(`/api/v1/repositories/${repository_id}/search`, {
+        query,
+        top_k,
+      });
+      return data;
+    },
+  });
+};
