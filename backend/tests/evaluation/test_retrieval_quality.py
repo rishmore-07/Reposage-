@@ -420,16 +420,76 @@ class TestRetrievalQuality:
             # We don't assert empty since BM25 might weakly match
             # individual terms, but we verify it doesn't confidently match
 
+    def _hybrid_rerank_search(self, query: str, top_k: int = 10) -> list[str]:
+        """Run hybrid search + Mock Reranker and return chunk IDs."""
+        from app.modules.retrieval.reranker import MockRerankerProvider
+        from app.modules.retrieval.schemas import RerankerCandidate
+        import asyncio
+        
+        # Candidate pool of 30
+        kw_tokens = _tokenize(query)
+        keyword_results = []
+        if kw_tokens:
+            kw_scores = self.index.bm25.get_scores(kw_tokens)
+            kw_scored = sorted(enumerate(kw_scores), key=lambda x: x[1], reverse=True)
+            for idx, score in kw_scored[:50]:
+                if score > 0:
+                    keyword_results.append({**self.index.chunk_data[idx], "score": float(score)})
+
+        semantic_results = _mock_semantic_search(query, CHUNKS, 50)
+        fused = reciprocal_rank_fusion(semantic_results, keyword_results, k=60)
+        
+        candidate_pool = fused[:30]
+        
+        candidates = []
+        for r in candidate_pool:
+            # Reconstruct from dict/object (reciprocal_rank_fusion returns list[SearchResult])
+            # Wait, in the evaluation test, reciprocal_rank_fusion returns object but let's check
+            # test_retrieval_quality passes dicts to rrf... wait, in Phase 3F it might return dicts or objects.
+            # Assuming r is object because `r.chunk_id` is used above `[r.chunk_id for r in fused[:top_k]]`
+            candidates.append(RerankerCandidate(
+                chunk_id=r.chunk_id,
+                repository_id=getattr(r, "repository_id", "r1"),
+                file_path=getattr(r, "file_path", "test.py"),
+                language=getattr(r, "language", "python"),
+                chunk_type=getattr(r, "chunk_type", "function"),
+                symbol_name=getattr(r, "symbol_name", None),
+                class_name=getattr(r, "class_name", None),
+                parent_symbol=getattr(r, "parent_symbol", None),
+                module_name=getattr(r, "module_name", None),
+                context_path=getattr(r, "context_path", None),
+                content=getattr(r, "content", ""),
+                rrf_score=getattr(r, "rrf_score", 0.0),
+                semantic_rank=getattr(r, "semantic_rank", None),
+                keyword_rank=getattr(r, "keyword_rank", None),
+            ))
+            
+        provider = MockRerankerProvider()
+        # Create an event loop explicitly for this sync method or use asyncio.run
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop and loop.is_running():
+            # Already in an event loop (e.g. if the test itself is marked async, but it isn't here)
+            # Actually, `test_retrieval_comparison_table` is NOT marked async.
+            pass
+        
+        reranked = asyncio.run(provider.rerank(query, candidates, top_k))
+        return [c.chunk_id for c in reranked]
+
     def test_retrieval_comparison_table(self, capsys):
         """
         Generate a comparison table of Recall@5, Recall@10, MRR@10
-        for all three search modes.
+        for all three search modes + Pipeline Validation Mock Reranker.
 
         This is the key evaluation output.
         """
         all_keyword_metrics = []
         all_semantic_metrics = []
         all_hybrid_metrics = []
+        all_reranker_metrics = []
 
         for eq in EVALUATION_QUERIES:
             if not eq["relevant_chunk_ids"]:
@@ -440,29 +500,32 @@ class TestRetrievalQuality:
             kw_ids = self._keyword_search(eq["query"], top_k=10)
             sem_ids = self._semantic_search(eq["query"], top_k=10)
             hyb_ids = self._hybrid_search(eq["query"], top_k=10)
+            rr_ids = self._hybrid_rerank_search(eq["query"], top_k=10)
 
             all_keyword_metrics.append(compute_all_metrics(kw_ids, relevant))
             all_semantic_metrics.append(compute_all_metrics(sem_ids, relevant))
             all_hybrid_metrics.append(compute_all_metrics(hyb_ids, relevant))
+            all_reranker_metrics.append(compute_all_metrics(rr_ids, relevant))
 
         def _avg(metrics_list, field):
             values = [getattr(m, field) for m in metrics_list]
             return sum(values) / len(values) if values else 0.0
 
-        print("\n" + "=" * 70)
+        print("\n" + "=" * 90)
         print("RETRIEVAL QUALITY EVALUATION")
-        print("=" * 70)
-        print(f"\n{'Mode':<15} {'Recall@5':>10} {'Recall@10':>10} "
+        print("=" * 90)
+        print(f"\n{'Mode':<30} {'Recall@5':>10} {'Recall@10':>10} "
               f"{'Prec@5':>10} {'Prec@10':>10} {'MRR@10':>10}")
-        print("-" * 70)
+        print("-" * 90)
 
         for name, metrics_list in [
             ("Keyword", all_keyword_metrics),
             ("Semantic", all_semantic_metrics),
-            ("Hybrid", all_hybrid_metrics),
+            ("Hybrid RRF", all_hybrid_metrics),
+            ("Hybrid + Mock (Pipeline Val)", all_reranker_metrics),
         ]:
             print(
-                f"{name:<15}"
+                f"{name:<30}"
                 f" {_avg(metrics_list, 'recall_at_5'):>10.3f}"
                 f" {_avg(metrics_list, 'recall_at_10'):>10.3f}"
                 f" {_avg(metrics_list, 'precision_at_5'):>10.3f}"
@@ -470,29 +533,30 @@ class TestRetrievalQuality:
                 f" {_avg(metrics_list, 'mrr_at_10'):>10.3f}"
             )
 
-        print("=" * 70)
+        print("=" * 90)
 
         # Per-query breakdown
-        print(f"\n{'Query':<50} {'KW R@10':>8} {'Sem R@10':>8} {'Hyb R@10':>8}")
+        print(f"\n{'Query':<40} {'KW R@10':>8} {'Sem R@10':>8} {'Hyb R@10':>8} {'Rer R@10':>8}")
         print("-" * 80)
         q_idx = 0
         for eq in EVALUATION_QUERIES:
             if not eq["relevant_chunk_ids"]:
                 continue
-            query_short = eq["query"][:48]
+            query_short = eq["query"][:38]
             kw_r = all_keyword_metrics[q_idx].recall_at_10
             sem_r = all_semantic_metrics[q_idx].recall_at_10
             hyb_r = all_hybrid_metrics[q_idx].recall_at_10
-            print(f"{query_short:<50} {kw_r:>8.3f} {sem_r:>8.3f} {hyb_r:>8.3f}")
+            rr_r = all_reranker_metrics[q_idx].recall_at_10
+            print(f"{query_short:<40} {kw_r:>8.3f} {sem_r:>8.3f} {hyb_r:>8.3f} {rr_r:>8.3f}")
             q_idx += 1
 
         print("=" * 80)
 
         # Basic assertions — these verify the measurement framework works
-        # They don't assert hybrid > others because that depends on the data
         assert len(all_keyword_metrics) > 0, "No metrics computed"
         assert len(all_semantic_metrics) > 0, "No metrics computed"
         assert len(all_hybrid_metrics) > 0, "No metrics computed"
+        assert len(all_reranker_metrics) > 0, "No metrics computed"
 
 
 class TestSemanticAcceptance:

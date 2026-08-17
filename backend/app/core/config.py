@@ -114,6 +114,12 @@ class Settings(BaseSettings):
     rrf_k: int = 60
     keyword_index_dir: str = "./data/keyword_indices"
 
+    # ── Reranking (Phase 3G) ──────────────────────────────────────────────────
+    reranker_enabled: bool = False
+    reranker_provider: str = "mock"
+    reranker_model: str = ""
+    reranker_candidate_k: int = 30
+
     # ── Logging ───────────────────────────────────────────────────────────────
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     log_format: Literal["json", "text"] = "json"

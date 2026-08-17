@@ -50,6 +50,25 @@ class RetrievedChunk(BaseModel):
     score: float
 
 
+class RerankerCandidate(BaseModel):
+    """Strongly typed representation of a candidate sent to the reranker."""
+    chunk_id: str
+    repository_id: str
+    file_path: str
+    language: str
+    chunk_type: str
+    symbol_name: str | None = None
+    class_name: str | None = None
+    parent_symbol: str | None = None
+    module_name: str | None = None
+    context_path: str | None = None
+    content: str
+    rrf_score: float | None = None
+    semantic_rank: int | None = None
+    keyword_rank: int | None = None
+    reranker_score: float | None = None
+
+
 class SearchResult(BaseModel):
     """
     Unified search result supporting all retrieval modes.
@@ -85,6 +104,7 @@ class SearchResult(BaseModel):
     semantic_score: float | None = None
     keyword_score: float | None = None
     rrf_score: float | None = None
+    reranker_score: float | None = None
 
 
 class SearchQueryResponse(BaseModel):
@@ -93,3 +113,5 @@ class SearchQueryResponse(BaseModel):
     results: list[SearchResult]
     mode: str = "semantic"
     total_candidates: int = 0
+    candidate_count: int | None = None
+    reranker_latency_ms: float | None = None

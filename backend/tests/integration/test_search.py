@@ -306,3 +306,121 @@ class TestSearchModes:
                 mode="invalid",
                 top_k=10,
             )
+
+
+class TestSearchRerankingIntegration:
+    """Tests for Phase 3G Retrieval Reranking API integration."""
+
+    @pytest.mark.asyncio
+    async def test_hybrid_reranker_disabled_preserves_api(self):
+        """When disabled, the API response should not break and reranker_score is None."""
+        service = SearchService()
+
+        with patch("app.modules.retrieval.search_service.settings.reranker_enabled", False), \
+             patch.object(
+                 service._hybrid_service, "search",
+                 new_callable=AsyncMock
+             ) as mock_hybrid:
+            
+            mock_hybrid.return_value = [
+                {
+                    "chunk_id": "c1",
+                    "repository_id": "r1",
+                    "file_path": "a.py",
+                    "language": "python",
+                    "chunk_type": "code",
+                    "content": "test",
+                    "score": 0.5,
+                    "rrf_score": 0.5,
+                }
+            ]
+
+            response = await service.search(
+                repository_id=uuid.uuid4(),
+                query="test",
+                mode="hybrid",
+                top_k=10,
+            )
+            
+            assert response["mode"] == "hybrid"
+            assert len(response["results"]) == 1
+            assert response["results"][0]["reranker_score"] is None
+
+    @pytest.mark.asyncio
+    async def test_hybrid_reranker_enabled_returns_scores(self):
+        """When enabled, the API response should include reranker_score."""
+        service = SearchService()
+        
+        with patch("app.modules.retrieval.search_service.settings.reranker_enabled", True), \
+             patch("app.modules.retrieval.search_service.settings.reranker_candidate_k", 30), \
+             patch("app.modules.retrieval.reranker_service.settings.reranker_enabled", True):
+             
+            # Re-init to pick up mocked settings
+            service = SearchService()
+             
+            with patch.object(service._hybrid_service, "search", new_callable=AsyncMock) as mock_hybrid:
+                mock_hybrid.return_value = [
+                    {
+                        "chunk_id": "c1",
+                        "repository_id": "r1",
+                        "file_path": "a.py",
+                        "language": "python",
+                        "chunk_type": "code",
+                        "content": "test auth",
+                        "score": 0.5,
+                        "rrf_score": 0.5,
+                    }
+                ]
+
+                response = await service.search(
+                    repository_id=uuid.uuid4(),
+                    query="auth",
+                    mode="hybrid",
+                    top_k=10,
+                )
+                
+                assert response["mode"] == "hybrid"
+                assert len(response["results"]) == 1
+                assert response["results"][0]["reranker_score"] is not None
+                assert response["results"][0]["reranker_score"] > 0.0
+
+    @pytest.mark.asyncio
+    async def test_hybrid_reranker_failure_does_not_return_500(self):
+        """When reranker fails, it should gracefully return the original results."""
+        service = SearchService()
+        
+        with patch("app.modules.retrieval.search_service.settings.reranker_enabled", True), \
+             patch("app.modules.retrieval.search_service.settings.reranker_candidate_k", 30), \
+             patch("app.modules.retrieval.reranker_service.settings.reranker_enabled", True):
+             
+            service = SearchService()
+             
+            with patch.object(service._hybrid_service, "search", new_callable=AsyncMock) as mock_hybrid, \
+                 patch.object(service._reranker_service, "rerank", new_callable=AsyncMock) as mock_rerank:
+                
+                mock_hybrid.return_value = [
+                    {
+                        "chunk_id": "c1",
+                        "repository_id": "r1",
+                        "file_path": "a.py",
+                        "language": "python",
+                        "chunk_type": "code",
+                        "content": "test",
+                        "score": 0.5,
+                        "rrf_score": 0.5,
+                    }
+                ]
+                
+                mock_rerank.side_effect = Exception("Simulated provider failure")
+
+                # Should not raise
+                response = await service.search(
+                    repository_id=uuid.uuid4(),
+                    query="test",
+                    mode="hybrid",
+                    top_k=10,
+                )
+                
+                assert response["mode"] == "hybrid"
+                assert len(response["results"]) == 1
+                assert response["results"][0]["reranker_score"] is None

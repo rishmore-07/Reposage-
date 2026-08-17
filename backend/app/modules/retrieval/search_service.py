@@ -50,6 +50,9 @@ class SearchService:
         self._semantic_service = SemanticSearchService()
         self._keyword_service = KeywordSearchService(db=db)
         self._hybrid_service = HybridSearchService(db=db)
+        # Import dynamically or at top-level; we use top-level here since there's no circular dep
+        from app.modules.retrieval.reranker_service import RerankerService
+        self._reranker_service = RerankerService()
 
     async def search(
         self,
@@ -93,6 +96,9 @@ class SearchService:
                     }
                 )
 
+        candidate_count = None
+        reranker_latency_ms = None
+
         if mode == "semantic":
             results = await self._semantic_search(
                 repository_id, query, top_k, debug
@@ -102,17 +108,23 @@ class SearchService:
                 repository_id, query, top_k, debug
             )
         elif mode == "hybrid":
-            results = await self._hybrid_search(
+            results, candidate_count, reranker_latency_ms = await self._hybrid_search(
                 repository_id, query, top_k, debug
             )
         else:
             raise ValueError(f"Unknown search mode: {mode}")
 
-        return {
+        response = {
             "results": results,
             "mode": mode,
             "total_candidates": len(results),
         }
+        
+        if debug and candidate_count is not None:
+            response["candidate_count"] = candidate_count
+            response["reranker_latency_ms"] = reranker_latency_ms
+            
+        return response
 
     async def _semantic_search(
         self,
@@ -191,11 +203,92 @@ class SearchService:
         query: str,
         top_k: int,
         debug: bool,
-    ) -> list[dict[str, Any]]:
-        """Execute hybrid search (semantic + keyword + RRF)."""
-        return await self._hybrid_service.search(
+    ) -> tuple[list[dict[str, Any]], int | None, float | None]:
+        """
+        Execute hybrid search (semantic + keyword + RRF + optional Reranker).
+        
+        Returns:
+            Tuple of (results, candidate_count, reranker_latency_ms)
+        """
+        from app.modules.retrieval.schemas import RerankerCandidate
+        
+        # Candidate generation via RRF
+        candidate_k = settings.reranker_candidate_k if self._reranker_service.enabled else top_k
+        
+        rrf_results = await self._hybrid_service.search(
             repository_id=repository_id,
             query=query,
-            top_k=top_k,
+            top_k=candidate_k,
             debug=debug,
         )
+
+        if not self._reranker_service.enabled:
+            # Explicitly append reranker_score=None for backwards compatibility schema alignment
+            for r in rrf_results:
+                r["reranker_score"] = None
+            return rrf_results, None, None
+
+        # Build typed candidates for reranker
+        candidates = []
+        for r in rrf_results:
+            candidates.append(RerankerCandidate(
+                chunk_id=r["chunk_id"],
+                repository_id=r["repository_id"],
+                file_path=r["file_path"],
+                language=r["language"],
+                chunk_type=r["chunk_type"],
+                symbol_name=r.get("symbol_name"),
+                class_name=r.get("class_name"),
+                parent_symbol=r.get("parent_symbol"),
+                module_name=r.get("module_name"),
+                context_path=r.get("context_path"),
+                content=r["content"],
+                rrf_score=r.get("rrf_score"),
+                semantic_rank=r.get("semantic_rank"),
+                keyword_rank=r.get("keyword_rank"),
+            ))
+
+        candidate_count = len(candidates)
+        reranker_latency_ms = 0.0
+
+        # Attempt to rerank, with graceful degradation on failure
+        try:
+            reranked, reranker_latency_ms = await self._reranker_service.rerank(
+                query=query,
+                candidates=candidates,
+                top_k=top_k
+            )
+            
+            # Map back to dictionaries and preserve original dict fields
+            # We index original rrf_results by chunk_id to quickly reconstruct the full dictionary
+            rrf_results_by_id = {r["chunk_id"]: r for r in rrf_results}
+            
+            final_results = []
+            for i, c in enumerate(reranked, start=1):
+                original_dict = rrf_results_by_id[c.chunk_id].copy()
+                original_dict["rank"] = i  # New final rank
+                original_dict["reranker_score"] = c.reranker_score
+                final_results.append(original_dict)
+                
+            return final_results, candidate_count, reranker_latency_ms
+            
+        except Exception as e:
+            # Graceful degradation
+            logger.error(
+                "reranker_failure_fallback",
+                repository_id=str(repository_id),
+                candidate_count=candidate_count,
+                reranker_provider=self._reranker_service.provider_name,
+                error_type=type(e).__name__,
+                error=str(e)
+            )
+            
+            # Truncate original RRF results to top_k and assign rank
+            fallback_results = []
+            for i, r in enumerate(rrf_results[:top_k], start=1):
+                r_copy = r.copy()
+                r_copy["rank"] = i
+                r_copy["reranker_score"] = None
+                fallback_results.append(r_copy)
+                
+            return fallback_results, candidate_count, 0.0
